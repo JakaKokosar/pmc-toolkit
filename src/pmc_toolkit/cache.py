@@ -75,10 +75,27 @@ def write_cached_object_keys(
 
 
 def local_object_path(cache_root: Path, versioned_pmcid: str, key: str) -> Path:
-    """Build the local cache path for an article object and reject keys outside that prefix."""
+    """Return the local cache path for an S3 object key.
+
+    S3 object keys are remote-controlled opaque strings, not trusted filesystem paths.
+    A key may still start with the expected article prefix while using ``..`` or an
+    absolute path segment to escape the article cache directory, so this helper
+    enforces that the resolved destination remains inside that directory.
+    """
     prefix = f"{versioned_pmcid}/"
     if not key.startswith(prefix):
         raise ValueError(f"Object key {key!r} does not belong to article: {versioned_pmcid}.")
 
     relpath = key.removeprefix(prefix)
-    return article_cache_dir(cache_root, versioned_pmcid) / relpath
+    article_dir = article_cache_dir(cache_root, versioned_pmcid)
+
+    # Keep downloads contained to the article cache directory.
+    if Path(relpath).is_absolute():
+        raise ValueError(f"Unsafe object key path for article: {versioned_pmcid}.")
+
+    dest_path = (article_dir / relpath).resolve()
+    article_dir_resolved = article_dir.resolve()
+    if not dest_path.is_relative_to(article_dir_resolved):
+        raise ValueError(f"Unsafe object key path for article: {versioned_pmcid}.")
+
+    return dest_path

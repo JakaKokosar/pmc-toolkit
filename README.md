@@ -109,7 +109,19 @@ Here **“storage”** means the AWS bucket plus the local cache directory where
 
 - `src/pmc_toolkit/cli.py` - Typer CLI commands
 - `src/pmc_toolkit/storage_api.py` - import this for programmatic use: list versions, metadata, list all keys, fetch to cache
-- `src/pmc_toolkit/storage_utils.py` - boto3/unsigned S3 client, list-objects, downloads, `platformdirs` cache root; implementation details for `storage_api`
+- `src/pmc_toolkit/storage_utils.py` - boto3/unsigned S3 client, list-objects, downloads; implementation details for `storage_api`
+- `src/pmc_toolkit/cache.py` - per-article directories under the cache root, JSON metadata, cached S3 key listings, and safe local paths for downloaded objects
 - `src/pmc_toolkit/validators.py` - identifier validation
 - `src/pmc_toolkit/models.py` - response models
 - `tests/` - automated tests
+
+### Local cache
+
+Each resolved article version has a directory `<cache_root>/<PMCid.N>/` containing:
+
+- **`<PMCid.N>.json`** — cached metadata (from S3 `metadata/<PMCid.N>.json`), written after a successful read.
+- **`.pmc-object-keys.json`** — JSON array of S3 object keys under that article’s prefix, written after `list_objects_v2` (or read on cache hit). If this file is missing or not a list of strings, listing or fetch may refetch from S3 or raise `ValueError` for an invalid manifest.
+
+**Cache root selection:** `pmc metadata` and `pmc files` (and the matching `storage_api` functions) always use the default OS user cache from [`platformdirs`](https://github.com/tox-dev/platformdirs). Only `pmc fetch` and `fetch_files(..., cache_dir=...)` accept `--cache-dir` or the `PMC_TOOLKIT_CACHE` environment variable.
+
+**Download paths:** For each S3 key, the toolkit maps `PMCid.N/relative/path` to `<cache_root>/PMCid.N/relative/path`. Keys that do not start with the `PMCid.N/` prefix, use an absolute path segment, or resolve outside that directory (for example `..` path segments) are rejected with `ValueError` so downloads never leave the article folder.
