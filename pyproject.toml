@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pmc-toolkit"
+version = "0.1.0"
+description = "Python toolkit and CLI for exploring, downloading, and parsing PMC article data."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "boto3>=1.42.93",
+    "platformdirs>=4.3.0",
+    "pydantic>=2.13.3",
+    "typer>=0.24.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "ruff>=0.15.11",
+    "ty>=0.0.32",
+    "types-boto3[s3]>=1.42.94",
+]
+
+[project.scripts]
+pmc = "pmc_toolkit.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pmc_toolkit"]
