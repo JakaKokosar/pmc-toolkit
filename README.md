@@ -14,6 +14,10 @@ The project currently supports:
 - downloading files for an article version into a local cache (optional `--ext`
   filters apply only to `fetch`, not to `files`; `--ext` accepts either a
   comma-separated list or repeated flags)
+- parsing cached full-text XML into a normalized article dictionary with
+  title, journal, article, affiliations, author notes, abstract, content,
+  acknowledgements, data availability, related articles, custom metadata,
+  competing interests, supplementary media, references, figures, and tables
 
 ## Requirements
 
@@ -102,6 +106,25 @@ uv run pmc fetch PMC11370360.1 --cache-dir ./data
 PMC_TOOLKIT_CACHE=./data uv run pmc fetch PMC11370360.1
 ```
 
+Parse a cached XML file. Run `fetch --ext xml` first if the XML is not already
+in the cache. With no parse flags, the command prints the full normalized
+article dictionary.
+
+```bash
+uv run pmc fetch PMC11370360.1 --ext xml
+uv run pmc parse PMC11370360.1
+```
+
+Select only the fields you want, and add `--json` for structured output:
+
+```bash
+uv run pmc parse PMC11370360.1 --article --content
+uv run pmc parse PMC11370360.1 --title --abstract
+uv run pmc parse PMC11370360.1 --affiliations --author-notes
+uv run pmc parse PMC11370360.1 --acknowledgements --data-availability
+uv run pmc parse PMC11370360.1 --references --json
+```
+
 ## Project Layout
 
 Here **“storage”** means the AWS bucket plus the local cache directory where
@@ -110,6 +133,8 @@ Here **“storage”** means the AWS bucket plus the local cache directory where
 - `src/pmc_toolkit/cli.py` - Typer CLI commands
 - `src/pmc_toolkit/storage_api.py` - import this for programmatic use: list versions, metadata, list all keys, fetch to cache
 - `src/pmc_toolkit/storage_utils.py` - boto3/unsigned S3 client, list-objects, downloads; implementation details for `storage_api`
+- `src/pmc_toolkit/xml_parse_api.py` - import this for programmatic parsing of cached XML files
+- `src/pmc_toolkit/xml_parse_utils.py` - small `lxml`-based helpers for cached full-text XML extraction
 - `src/pmc_toolkit/cache.py` - per-article directories under the cache root, JSON metadata, cached S3 key listings, and safe local paths for downloaded objects
 - `src/pmc_toolkit/validators.py` - identifier validation
 - `src/pmc_toolkit/models.py` - response models

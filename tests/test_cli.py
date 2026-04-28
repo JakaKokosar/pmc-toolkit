@@ -9,6 +9,7 @@ from pmc_toolkit.models import (
     PMCFetchResult,
     PMCFiles,
     PMCMetadata,
+    PMCParseResult,
     PMCVersions,
 )
 
@@ -217,6 +218,120 @@ def test_fetch_subcommand_accepts_comma_separated_extensions(
     assert result.exit_code == 0, result.stdout
     assert captured["requested_pmcid"] == "PMC11370360.2"
     assert captured["extensions"] == ["xml,pdf,jpg"]
+
+
+def test_parse_subcommand_outputs_selected_json(monkeypatch, tmp_path) -> None:
+    def fake_parse(requested_pmcid, cache_dir=None):
+        assert requested_pmcid == "PMC11370360.1"
+        assert cache_dir == tmp_path
+        return PMCParseResult(
+            versioned_pmcid="PMC11370360.1",
+            xml_path=str(tmp_path / "PMC11370360.1" / "PMC11370360.1.xml"),
+            data={
+                "source": {"versioned_pmcid": "PMC11370360.1"},
+                "title": "Example title",
+                "journal": {"title": "bioRxiv"},
+                "article": {"title": "Example title", "authors": ["Jane Doe"]},
+                "affiliations": [],
+                "author_notes": {"notes": [], "correspondence": []},
+                "related_articles": [],
+                "custom_metadata": {},
+                "abstract": {"text": "Example abstract"},
+                "content": {
+                    "headings": ["Introduction", "Methods"],
+                    "sections": [
+                        {
+                            "source_id": "s1",
+                            "paragraphs": [
+                                {"source_id": "p1", "reference_ids": ["R1"]},
+                            ],
+                        },
+                    ],
+                },
+                "acknowledgements": [],
+                "data_availability": [],
+                "competing_interests": [],
+                "supplementary_media": [],
+                "references": [],
+                "figures": [],
+                "tables": [],
+            },
+        )
+
+    monkeypatch.setattr("pmc_toolkit.cli.parse_cached_xml", fake_parse)
+
+    result = runner.invoke(
+        app,
+        [
+            "parse",
+            "PMC11370360.1",
+            "--title",
+            "--article",
+            "--content",
+            "--cache-dir",
+            str(tmp_path),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    assert '"title": "Example title"' in result.stdout
+    assert '"headings": [' in result.stdout
+    assert '"source_id": "s1"' in result.stdout
+    assert '"source_id": "p1"' in result.stdout
+    assert '"reference_ids": [' in result.stdout
+    assert '"id":' not in result.stdout
+    assert "journal" not in result.stdout
+
+
+def test_parse_subcommand_defaults_to_all_categories(monkeypatch) -> None:
+    def fake_parse(requested_pmcid, cache_dir=None):
+        return PMCParseResult(
+            versioned_pmcid="PMC11370360.1",
+            xml_path="/cache/PMC11370360.1/PMC11370360.1.xml",
+            data={
+                "source": {"versioned_pmcid": "PMC11370360.1"},
+                "title": "Example title",
+                "journal": {"title": "bioRxiv"},
+                "article": {"title": "Example title"},
+                "affiliations": [],
+                "author_notes": {"notes": [], "correspondence": []},
+                "related_articles": [],
+                "custom_metadata": {},
+                "abstract": {"text": "Example abstract"},
+                "content": {"headings": ["Introduction"]},
+                "acknowledgements": [],
+                "data_availability": [],
+                "competing_interests": [],
+                "supplementary_media": [],
+                "references": [],
+                "figures": [],
+                "tables": [],
+            },
+        )
+
+    monkeypatch.setattr("pmc_toolkit.cli.parse_cached_xml", fake_parse)
+
+    result = runner.invoke(app, ["parse", "PMC11370360.1"])
+
+    assert result.exit_code == 0, result.stdout
+    assert '"source": {' in result.stdout
+    assert '"title": "Example title"' in result.stdout
+    assert '"journal": {' in result.stdout
+    assert '"article": {' in result.stdout
+    assert '"affiliations": []' in result.stdout
+    assert '"author_notes": {' in result.stdout
+    assert '"related_articles": []' in result.stdout
+    assert '"custom_metadata": {}' in result.stdout
+    assert '"abstract": {' in result.stdout
+    assert '"content": {' in result.stdout
+    assert '"acknowledgements": []' in result.stdout
+    assert '"data_availability": []' in result.stdout
+    assert '"competing_interests": []' in result.stdout
+    assert '"supplementary_media": []' in result.stdout
+    assert '"references": []' in result.stdout
+    assert '"figures": []' in result.stdout
+    assert '"tables": []' in result.stdout
 
 
 def test_files_subcommand_exits_with_code_1_on_unexpected_error(monkeypatch) -> None:

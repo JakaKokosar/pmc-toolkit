@@ -6,7 +6,12 @@ from botocore.exceptions import ClientError
 
 from pmc_toolkit import cache as storage_cache
 from pmc_toolkit.models import FetchAction
-from pmc_toolkit.storage_api import fetch_files, get_metadata, list_files, list_versions
+from pmc_toolkit.storage_api import (
+    fetch_files,
+    get_metadata,
+    list_files,
+    list_versions,
+)
 
 
 class FakePaginator:

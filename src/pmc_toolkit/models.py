@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -47,3 +48,9 @@ class PMCFetchResult(BaseModel):
     versioned_pmcid: str
     cache_dir: str
     files: list[PMCFetchFile]
+
+
+class PMCParseResult(BaseModel):
+    versioned_pmcid: str
+    xml_path: str
+    data: dict[str, Any]
