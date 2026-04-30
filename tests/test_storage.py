@@ -511,6 +511,32 @@ def test_fetch_files_rejects_path_traversal_keys(monkeypatch, tmp_path) -> None:
         fetch_files("PMC11370360.1", cache_dir=tmp_path)
 
 
+@pytest.mark.parametrize(
+    "key",
+    [
+        "PMC11370360.1/./PMC11370360.1.xml",
+        "PMC11370360.1/figures/../PMC11370360.1.xml",
+        "PMC11370360.1/figures//PMC11370360.1.xml",
+    ],
+)
+def test_fetch_files_rejects_keys_that_alias_local_paths(
+    monkeypatch, tmp_path, key: str
+) -> None:
+    class FakeS3Client:
+        def get_paginator(self, name: str):
+            return FakePaginator(_keys_to_pages([key]))
+
+        def download_file(self, Bucket, Key, Filename):  # noqa: N803
+            raise AssertionError("expected key sanitization to prevent downloads")
+
+    monkeypatch.setattr(
+        "pmc_toolkit.storage_utils._get_s3_client", lambda: FakeS3Client()
+    )
+
+    with pytest.raises(ValueError, match="Unsafe object key path"):
+        fetch_files("PMC11370360.1", cache_dir=tmp_path)
+
+
 def test_fetch_files_uses_custom_cache_dir_after_s3_version_resolution(
     monkeypatch, tmp_path
 ) -> None:

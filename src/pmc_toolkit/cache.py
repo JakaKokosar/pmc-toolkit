@@ -89,11 +89,16 @@ def local_object_path(cache_root: Path, versioned_pmcid: str, key: str) -> Path:
     relpath = key.removeprefix(prefix)
     article_dir = article_cache_dir(cache_root, versioned_pmcid)
 
-    # Keep downloads contained to the article cache directory.
-    if Path(relpath).is_absolute():
+    # Keep downloads contained to the article cache directory without allowing
+    # S3's opaque key strings to alias each other as normalized filesystem paths.
+    key_parts = relpath.split("/")
+    if (
+        Path(relpath).is_absolute()
+        or any(part in {"", ".", ".."} or "\\" in part for part in key_parts)
+    ):
         raise ValueError(f"Unsafe object key path for article: {versioned_pmcid}.")
 
-    dest_path = (article_dir / relpath).resolve()
+    dest_path = article_dir.joinpath(*key_parts).resolve()
     article_dir_resolved = article_dir.resolve()
     if not dest_path.is_relative_to(article_dir_resolved):
         raise ValueError(f"Unsafe object key path for article: {versioned_pmcid}.")
