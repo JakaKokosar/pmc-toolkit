@@ -79,13 +79,18 @@ SAMPLE_XML = """\
     </article-meta>
   </front>
   <body>
+    <p id="body-p1">Opening body paragraph.</p>
     <sec id="s1">
       <title>Introduction</title>
-      <p>Text with <xref ref-type="bibr" rid="R1">1</xref>.</p>
+      <p id="intro-p1">Text with <xref ref-type="bibr" rid="R1">1</xref>.</p>
       <sec id="s1-1">
         <title>Background</title>
-        <p>Nested text.</p>
+        <p id="background-p1">Nested text.</p>
       </sec>
+    </sec>
+    <sec id="s2">
+      <title>Methods</title>
+      <p id="methods-p1">Methods text.</p>
     </sec>
     <fig id="fig1">
       <label>Figure 1</label>
@@ -151,6 +156,7 @@ def test_extract_article_data_returns_normalized_categories(tmp_path: Path) -> N
         "custom_metadata",
         "abstract",
         "content",
+        "sections",
         "acknowledgements",
         "data_availability",
         "competing_interests",
@@ -195,10 +201,28 @@ def test_extract_article_data_returns_content_and_back_matter(tmp_path: Path) ->
 
     data = extract_article_data(load_xml(path))
 
-    assert data["content"]["headings"] == ["Introduction", "Background"]
+    assert data["sections"] == [
+        "(1) Introduction",
+        "(1.1) Background",
+        "(2) Methods",
+    ]
+    assert "headings" not in data["content"]
+    assert data["content"]["paragraphs"][0]["source_id"] == "body-p1"
+    assert "content_id" not in data["content"]["paragraphs"][0]
     assert data["content"]["sections"][0]["source_id"] == "s1"
+    assert data["content"]["sections"][0]["section_id"] == "1"
+    assert "content_id" not in data["content"]["sections"][0]
+    assert data["content"]["sections"][0]["paragraphs"][0]["source_id"] == "intro-p1"
+    assert "content_id" not in data["content"]["sections"][0]["paragraphs"][0]
     assert data["content"]["sections"][0]["paragraphs"][0]["reference_ids"] == ["R1"]
     assert data["content"]["sections"][0]["sections"][0]["title"] == "Background"
+    assert data["content"]["sections"][0]["sections"][0]["section_id"] == "1.1"
+    assert "content_id" not in data["content"]["sections"][0]["sections"][0]
+    assert "content_id" not in data["content"]["sections"][0]["sections"][0]["paragraphs"][0]
+    assert data["content"]["sections"][1]["source_id"] == "s2"
+    assert data["content"]["sections"][1]["section_id"] == "2"
+    assert "content_id" not in data["content"]["sections"][1]
+    assert "content_id" not in data["content"]["sections"][1]["paragraphs"][0]
     assert data["references"][0]["source_id"] == "R1"
     assert data["references"][0]["article_title"] == "Prior work"
     assert data["references"][0]["identifiers"]["doi"] == "10.1000/prior"
@@ -207,9 +231,13 @@ def test_extract_article_data_returns_content_and_back_matter(tmp_path: Path) ->
     assert data["acknowledgements"][0]["paragraphs"][0]["text"] == (
         "Thanks to the participant."
     )
+    assert "content_id" not in data["acknowledgements"][0]["paragraphs"][0]
     assert data["data_availability"][0]["paragraphs"][0]["text"] == (
         "Data are available."
     )
+    assert "content_id" not in data["data_availability"][0]
+    assert "section_id" not in data["data_availability"][0]
+    assert "content_id" not in data["data_availability"][0]["paragraphs"][0]
     assert data["competing_interests"][0]["source_id"] == "coi1"
     assert data["supplementary_media"][0]["source_id"] == "supp1"
     assert data["supplementary_media"][0]["paragraphs"][0]["text"] == (
@@ -224,4 +252,30 @@ def test_extract_headings_returns_content_headings(tmp_path: Path) -> None:
     path = tmp_path / "article.xml"
     path.write_text(SAMPLE_XML, encoding="utf-8")
 
-    assert extract_headings(load_xml(path)) == ["Introduction", "Background"]
+    assert extract_headings(load_xml(path)) == [
+        "(1) Introduction",
+        "(1.1) Background",
+        "(2) Methods",
+    ]
+
+
+def test_extract_content_omits_empty_top_level_paragraphs(tmp_path: Path) -> None:
+    path = tmp_path / "article.xml"
+    path.write_text(
+        """
+        <article>
+          <body>
+            <sec id="S1">
+              <title>Introduction</title>
+              <p id="P1">Section paragraph.</p>
+            </sec>
+          </body>
+        </article>
+        """,
+        encoding="utf-8",
+    )
+
+    data = extract_article_data(load_xml(path))
+
+    assert "paragraphs" not in data["content"]
+    assert data["content"]["sections"][0]["paragraphs"][0]["source_id"] == "P1"

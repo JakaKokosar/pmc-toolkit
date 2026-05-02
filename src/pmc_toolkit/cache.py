@@ -9,6 +9,7 @@ from platformdirs import user_cache_dir
 from pmc_toolkit.models import PMCMetadata
 
 OBJECT_KEYS_CACHE_FILENAME = ".pmc-object-keys.json"
+EXTRACTED_ARTICLE_CACHE_FILENAME = ".pmc-extracted-article.json"
 
 
 def default_cache_root() -> Path:
@@ -29,6 +30,13 @@ def metadata_cache_path(cache_root: Path, versioned_pmcid: str) -> Path:
 
 def object_keys_cache_path(cache_root: Path, versioned_pmcid: str) -> Path:
     return article_cache_dir(cache_root, versioned_pmcid) / OBJECT_KEYS_CACHE_FILENAME
+
+
+def extracted_article_cache_path(cache_root: Path, versioned_pmcid: str) -> Path:
+    return (
+        article_cache_dir(cache_root, versioned_pmcid)
+        / EXTRACTED_ARTICLE_CACHE_FILENAME
+    )
 
 
 def _read_json_file(path: Path) -> Any | None:
@@ -54,13 +62,13 @@ def write_cached_metadata(
     path.write_text(metadata.model_dump_json(indent=2), encoding="utf-8")
 
 
-def read_cached_object_keys(
-    cache_root: Path, versioned_pmcid: str
-) -> list[str] | None:
+def read_cached_object_keys(cache_root: Path, versioned_pmcid: str) -> list[str] | None:
     payload = _read_json_file(object_keys_cache_path(cache_root, versioned_pmcid))
     if payload is None:
         return None
-    if not isinstance(payload, list) or not all(isinstance(item, str) for item in payload):
+    if not isinstance(payload, list) or not all(
+        isinstance(item, str) for item in payload
+    ):
         raise ValueError(f"Invalid cached file listing for article: {versioned_pmcid}.")
 
     return sorted(payload)
@@ -74,6 +82,29 @@ def write_cached_object_keys(
     path.write_text(json.dumps(sorted(keys), indent=2), encoding="utf-8")
 
 
+def read_cached_extracted_article(
+    cache_root: Path, versioned_pmcid: str
+) -> dict[str, Any] | None:
+    path = extracted_article_cache_path(cache_root, versioned_pmcid)
+    try:
+        payload = _read_json_file(path)
+    except json.JSONDecodeError:
+        return None
+    if payload is None:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+def write_cached_extracted_article(
+    cache_root: Path, versioned_pmcid: str, data: dict[str, Any]
+) -> None:
+    path = extracted_article_cache_path(cache_root, versioned_pmcid)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
 def local_object_path(cache_root: Path, versioned_pmcid: str, key: str) -> Path:
     """Return the local cache path for an S3 object key.
 
@@ -84,7 +115,9 @@ def local_object_path(cache_root: Path, versioned_pmcid: str, key: str) -> Path:
     """
     prefix = f"{versioned_pmcid}/"
     if not key.startswith(prefix):
-        raise ValueError(f"Object key {key!r} does not belong to article: {versioned_pmcid}.")
+        raise ValueError(
+            f"Object key {key!r} does not belong to article: {versioned_pmcid}."
+        )
 
     relpath = key.removeprefix(prefix)
     article_dir = article_cache_dir(cache_root, versioned_pmcid)

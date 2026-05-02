@@ -1,6 +1,7 @@
 """XML extraction helpers for cached PMC full-text articles."""
 
 from pathlib import Path
+import re
 from typing import Any
 
 import lxml.etree as etree  # ty: ignore[unresolved-import]
@@ -11,6 +12,7 @@ XMLParser = etree.XMLParser(
     resolve_entities=False,
     remove_blank_text=True,
 )
+REFERENCE_SEPARATOR_PATTERN = re.compile(r"^[\s,;]+$")
 
 
 def load_xml(path: Path) -> Any:
@@ -21,6 +23,7 @@ def load_xml(path: Path) -> Any:
 
 def extract_article_data(root: Any) -> dict[str, Any]:
     article = extract_article(root)
+    content = extract_content(root)
     return {
         "title": article.get("title"),
         "journal": extract_journal(root),
@@ -30,7 +33,8 @@ def extract_article_data(root: Any) -> dict[str, Any]:
         "related_articles": extract_related_articles(root),
         "custom_metadata": extract_custom_metadata(root),
         "abstract": extract_abstract(root),
-        "content": extract_content(root),
+        "content": content,
+        "sections": _section_headings(content["sections"]),
         "acknowledgements": extract_acknowledgements(root),
         "data_availability": extract_data_availability(root),
         "competing_interests": extract_competing_interests(root),
@@ -209,7 +213,9 @@ def extract_related_articles(root: Any) -> list[dict[str, Any]]:
                     "issue": _first_text(related, ".//issue"),
                     "pages": _page_range(related),
                     "date": _date_value(_first_element(related, "date")),
-                    "identifiers": _extract_typed_texts(related, ".//pub-id", "pub-id-type"),
+                    "identifiers": _extract_typed_texts(
+                        related, ".//pub-id", "pub-id-type"
+                    ),
                 },
                 keep_empty={"identifiers"},
             )
@@ -230,14 +236,30 @@ def extract_custom_metadata(root: Any) -> dict[str, str]:
 def extract_content(root: Any) -> dict[str, Any]:
     body = root.find(".//body")
     if body is None:
-        return {"headings": [], "paragraphs": [], "sections": []}
+        return {"sections": []}
 
-    sections = [_section_data(section) for section in body.xpath("./sec")]
-    return {
-        "headings": _section_headings(sections),
-        "paragraphs": [_paragraph_data(paragraph) for paragraph in body.xpath("./p")],
-        "sections": sections,
-    }
+    paragraphs = []
+    sections = []
+    section_index = 0
+    for child in body.xpath("./*"):
+        if child.tag == "p":
+            paragraphs.append(_paragraph_data(child))
+        elif child.tag == "sec":
+            section_index += 1
+            sections.append(
+                _section_data(
+                    child,
+                    content_path=(section_index,),
+                )
+            )
+
+    return _compact_dict(
+        {
+            "paragraphs": paragraphs,
+            "sections": sections,
+        },
+        keep_empty={"sections"},
+    )
 
 
 def extract_acknowledgements(root: Any) -> list[dict[str, Any]]:
@@ -248,8 +270,12 @@ def extract_acknowledgements(root: Any) -> list[dict[str, Any]]:
                 {
                     "source_id": ack.get("id"),
                     "title": _direct_child_text(ack, "title"),
-                    "paragraphs": [_paragraph_data(paragraph) for paragraph in ack.xpath("./p")],
-                    "sections": [_section_data(section) for section in ack.xpath("./sec")],
+                    "paragraphs": [
+                        _paragraph_data(paragraph) for paragraph in ack.xpath("./p")
+                    ],
+                    "sections": [
+                        _section_data(section) for section in ack.xpath("./sec")
+                    ],
                 },
                 keep_empty={"paragraphs", "sections"},
             )
@@ -346,7 +372,9 @@ def extract_figures(root: Any) -> list[dict[str, Any]]:
                     "source_id": figure.get("id"),
                     "label": _direct_child_text(figure, "label"),
                     "caption": _first_text(figure, "./caption"),
-                    "graphics": [_href(graphic) for graphic in figure.xpath(".//graphic")],
+                    "graphics": [
+                        _href(graphic) for graphic in figure.xpath(".//graphic")
+                    ],
                 },
                 keep_empty={"graphics"},
             )
@@ -376,7 +404,7 @@ def extract_metadata(root: Any) -> dict[str, Any]:
 
 
 def extract_headings(root: Any) -> list[str]:
-    return extract_content(root)["headings"]
+    return _section_headings(extract_content(root)["sections"])
 
 
 def _strip_namespaces(root: Any) -> None:
@@ -450,11 +478,15 @@ def _extract_typed_texts(root: Any, path: str, type_attribute: str) -> dict[str,
 
 def _extract_authors(article_meta: Any) -> list[dict[str, Any]]:
     authors = []
-    for contrib in article_meta.xpath(".//contrib-group/contrib[@contrib-type='author']"):
+    for contrib in article_meta.xpath(
+        ".//contrib-group/contrib[@contrib-type='author']"
+    ):
         collaboration = _first_text(contrib, ".//collab")
         surname = _first_text(contrib, ".//name/surname")
         given_names = _first_text(contrib, ".//name/given-names")
-        name = collaboration or " ".join(part for part in [given_names, surname] if part)
+        name = collaboration or " ".join(
+            part for part in [given_names, surname] if part
+        )
 
         author = {
             "name": name or None,
@@ -569,12 +601,36 @@ def _extract_funding(article_meta: Any) -> list[dict[str, Any]]:
     return [award for award in awards if award]
 
 
-def _section_data(section: Any) -> dict[str, Any]:
+def _section_data(
+    section: Any,
+    *,
+    content_path: tuple[int, ...] | None = None,
+) -> dict[str, Any]:
+    paragraphs = []
+    sections = []
+    if content_path is None:
+        paragraphs = [_paragraph_data(paragraph) for paragraph in section.xpath("./p")]
+        sections = [_section_data(child) for child in section.xpath("./sec")]
+    else:
+        child_section_index = 0
+        for child in section.xpath("./*"):
+            if child.tag == "p":
+                paragraphs.append(_paragraph_data(child))
+            elif child.tag == "sec":
+                child_section_index += 1
+                sections.append(
+                    _section_data(
+                        child,
+                        content_path=(*content_path, child_section_index),
+                    )
+                )
+
     data = {
         "source_id": section.get("id"),
+        "section_id": _content_section_id(content_path),
         "title": _direct_child_text(section, "title"),
-        "paragraphs": [_paragraph_data(paragraph) for paragraph in section.xpath("./p")],
-        "sections": [_section_data(child) for child in section.xpath("./sec")],
+        "paragraphs": paragraphs,
+        "sections": sections,
     }
     return _compact_dict(data, keep_empty={"paragraphs", "sections"})
 
@@ -593,7 +649,7 @@ def _abstract_section_data(section: Any) -> dict[str, Any]:
 def _paragraph_data(paragraph: Any) -> dict[str, Any]:
     data = {
         "source_id": paragraph.get("id"),
-        "text": _text(paragraph),
+        "text": _paragraph_text(paragraph),
         "reference_ids": _xref_targets(paragraph, "bibr"),
         "figure_ids": _xref_targets(paragraph, "fig"),
         "table_ids": _xref_targets(paragraph, "table"),
@@ -602,6 +658,107 @@ def _paragraph_data(paragraph: Any) -> dict[str, Any]:
         data,
         keep_empty={"reference_ids", "figure_ids", "table_ids"},
     )
+
+
+def _paragraph_text(paragraph: Any) -> str | None:
+    parts = _inline_text_parts(paragraph)
+    text = _render_text_parts(parts)
+    return text or None
+
+
+def _inline_text_parts(element: Any) -> list[Any]:
+    parts: list[Any] = []
+    if element.text:
+        parts.append(element.text)
+
+    for child in element:
+        if child.tag == "xref" and child.get("ref-type") == "bibr":
+            labels = _reference_labels(child)
+            if labels:
+                parts.append(("reference", labels))
+        else:
+            parts.extend(_inline_text_parts(child))
+
+        if child.tail:
+            parts.append(child.tail)
+
+    return parts
+
+
+def _render_text_parts(parts: list[Any]) -> str:
+    rendered: list[str] = []
+    pending_reference_labels: list[str] = []
+    pending_separator = ""
+
+    for part in parts:
+        if _is_reference_part(part):
+            pending_reference_labels.extend(part[1])
+            pending_separator = ""
+            continue
+
+        if not isinstance(part, str):
+            continue
+
+        if pending_reference_labels and REFERENCE_SEPARATOR_PATTERN.fullmatch(part):
+            pending_separator += part
+            continue
+
+        _flush_reference_labels(rendered, pending_reference_labels)
+        if pending_separator:
+            rendered.append(pending_separator)
+            pending_separator = ""
+        rendered.append(part)
+
+    _flush_reference_labels(rendered, pending_reference_labels)
+    if pending_separator:
+        rendered.append(pending_separator)
+
+    return _normalize_inline_text("".join(rendered))
+
+
+def _is_reference_part(part: Any) -> bool:
+    return (
+        isinstance(part, tuple)
+        and len(part) == 2
+        and part[0] == "reference"
+        and isinstance(part[1], list)
+    )
+
+
+def _flush_reference_labels(
+    rendered: list[str],
+    pending_reference_labels: list[str],
+) -> None:
+    if not pending_reference_labels:
+        return
+    rendered.append(f"[{','.join(pending_reference_labels)}]")
+    pending_reference_labels.clear()
+
+
+def _reference_labels(xref: Any) -> list[str]:
+    text = _text(xref)
+    if text:
+        return [
+            label for label in re.split(r"\s*,\s*|\s+", text.strip("[]()")) if label
+        ]
+
+    rid = xref.get("rid")
+    if not rid:
+        return []
+    return [part for part in rid.split() if part]
+
+
+def _normalize_inline_text(text: str) -> str:
+    value = " ".join(text.split())
+    value = re.sub(r"\s+([,.;:!?])", r"\1", value)
+    value = re.sub(r"(?<=[A-Za-z0-9])\[", " [", value)
+    return value
+
+
+def _content_section_id(content_path: tuple[int, ...] | None) -> str | None:
+    if content_path is None:
+        return None
+    return ".".join(str(part) for part in content_path)
 
 
 def _xref_targets(element: Any, ref_type: str) -> list[str]:
@@ -618,7 +775,11 @@ def _section_headings(sections: list[dict[str, Any]]) -> list[str]:
     for section in sections:
         title = section.get("title")
         if isinstance(title, str) and title:
-            headings.append(title)
+            section_id = section.get("section_id")
+            if isinstance(section_id, str) and section_id:
+                headings.append(f"({section_id}) {title}")
+            else:
+                headings.append(title)
         nested = section.get("sections", [])
         if isinstance(nested, list):
             headings.extend(_section_headings(nested))

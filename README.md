@@ -106,24 +106,30 @@ uv run pmc fetch PMC11370360.1 --cache-dir ./data
 PMC_TOOLKIT_CACHE=./data uv run pmc fetch PMC11370360.1
 ```
 
-Parse a cached XML file. Run `fetch --ext xml` first if the XML is not already
-in the cache. With no parse flags, the command prints the full normalized
-article dictionary.
+Extract JSON groups from a cached XML file. Run `fetch --ext xml` first if the
+XML is not already in the cache. The first extract command parses XML once and
+writes `<cache-root>/<PMCid.N>/.pmc-extracted-article.json`; later extract
+commands for the same article version read that JSON cache.
 
 ```bash
 uv run pmc fetch PMC11370360.1 --ext xml
-uv run pmc parse PMC11370360.1
+uv run pmc extract article-info PMC11370360.1
 ```
 
-Select only the fields you want, and add `--json` for structured output:
+Choose one output group per command. Output is JSON by default:
 
 ```bash
-uv run pmc parse PMC11370360.1 --article --content
-uv run pmc parse PMC11370360.1 --title --abstract
-uv run pmc parse PMC11370360.1 --affiliations --author-notes
-uv run pmc parse PMC11370360.1 --acknowledgements --data-availability
-uv run pmc parse PMC11370360.1 --references --json
+uv run pmc extract article-info PMC11370360.1
+uv run pmc extract content PMC11370360.1
+uv run pmc extract references PMC11370360.1
+uv run pmc extract figures PMC11370360.1
+uv run pmc extract tables PMC11370360.1
+uv run pmc extract supporting-info PMC11370360.1
 ```
+
+`article-info.publication_date` currently uses the first publication date found
+in the XML. If downstream consumers need to distinguish date types such as
+`epub`, `ppub`, or `collection`, the output can be extended later.
 
 ## Project Layout
 
@@ -146,6 +152,7 @@ Each resolved article version has a directory `<cache_root>/<PMCid.N>/` containi
 
 - **`<PMCid.N>.json`** — cached metadata (from S3 `metadata/<PMCid.N>.json`), written after a successful read.
 - **`.pmc-object-keys.json`** — JSON array of S3 object keys under that article’s prefix, written after `list_objects_v2` (or read on cache hit). If this file is missing or not a list of strings, listing or fetch may refetch from S3 or raise `ValueError` for an invalid manifest.
+- **`.pmc-extracted-article.json`** — full extracted JSON produced from the cached XML by `pmc extract`; reused by later extract commands for the same article version.
 
 **Cache root selection:** `pmc metadata` and `pmc files` (and the matching `storage_api` functions) always use the default OS user cache from [`platformdirs`](https://github.com/tox-dev/platformdirs). Only `pmc fetch` and `fetch_files(..., cache_dir=...)` accept `--cache-dir` or the `PMC_TOOLKIT_CACHE` environment variable.
 

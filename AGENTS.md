@@ -1,13 +1,19 @@
 # Agent / dev notes
 
-## After changing code
+- ALWAYS use **uv** for Python environment, dependency, and tool commands; do not use **pip**, **python -m pip**, **virtualenv**, **poetry**, or similar unless explicitly asked.
 
-From the project root, run the full check (typecheck, lint, tests):
+- ALWAYS run repo tools via **`uv run`** from the project root.
 
-```bash
-uv run ty check && uv run ruff check . && uv run pytest -q
-```
+- AFTER Python edits, run **`uv run ty check`**, **`uv run ruff check`**, and **`uv run ruff format`**; run **`uv sync`** when dependencies change.
 
-- **ty** — static type check (`ty` is a dev dependency; use `uv run`).
-- **ruff** — lint/format rules across the repo (library code and tests).
-- **pytest** — test suite in `tests/`.
+- AFTER behavior changes, run **`uv run pytest`** to check for regressions and report the result.
+
+- PREFER **`uv run pytest`** with a path, node id, or **`-k`** while iterating, not the whole suite each time.
+
+- NEVER start development servers, watchers, builds, or long-running local processes unless explicitly asked.
+
+- NEVER add or modify tests unless explicitly asked.
+
+- NEVER assume **`ruff`**, **`ty check`**, or **`pytest`** failures on main are pre-existing.
+
+- AVOID shortened names; prefer descriptive names like `version` over `ver`.

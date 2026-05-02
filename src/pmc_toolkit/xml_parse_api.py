@@ -1,37 +1,27 @@
-"""Public API for parsing cached PMC full-text XML files."""
+"""Public API for extracting cached PMC full-text XML files."""
 
 from pathlib import Path
+from typing import Any
 
 from pmc_toolkit import cache as storage_cache
 from pmc_toolkit import storage_utils
-from pmc_toolkit.models import PMCParseResult
+from pmc_toolkit.models import PMCExtractResult
 from pmc_toolkit.xml_parse_utils import extract_article_data, load_xml
 
-PARSE_OUTPUT_KEYS = (
-    "source",
-    "title",
-    "journal",
-    "article",
-    "affiliations",
-    "author_notes",
-    "related_articles",
-    "custom_metadata",
-    "abstract",
+EXTRACT_OUTPUT_KEYS = (
+    "article-info",
     "content",
-    "acknowledgements",
-    "data_availability",
-    "competing_interests",
-    "supplementary_media",
     "references",
     "figures",
     "tables",
+    "supporting-info",
 )
 
 
-def parse_cached_xml(
+def ensure_extracted_article(
     requested_pmcid: str,
     cache_dir: Path | None = None,
-) -> PMCParseResult:
+) -> PMCExtractResult:
     cache_root = storage_cache.resolve_cache_root(cache_dir)
     versioned_pmcid = storage_utils.resolve_versioned_pmcid(requested_pmcid)
     key = f"{versioned_pmcid}/{versioned_pmcid}.xml"
@@ -45,26 +35,160 @@ def parse_cached_xml(
             f"first. Expected file: {xml_path}"
         )
 
+    cached = storage_cache.read_cached_extracted_article(cache_root, versioned_pmcid)
+    if cached is not None and _is_extracted_article(cached):
+        return PMCExtractResult(
+            versioned_pmcid=versioned_pmcid,
+            xml_path=str(xml_path),
+            data=cached,
+        )
+
     root = load_xml(xml_path)
-    parsed = {
-        "source": {
-            "versioned_pmcid": versioned_pmcid,
-            "xml_path": str(xml_path),
-        },
-        **extract_article_data(root),
-    }
-    return PMCParseResult(
+    parsed = _group_extracted_article(
+        extract_article_data(root),
+        versioned_pmcid=versioned_pmcid,
+        xml_path=xml_path,
+    )
+    storage_cache.write_cached_extracted_article(cache_root, versioned_pmcid, parsed)
+    return PMCExtractResult(
         versioned_pmcid=versioned_pmcid,
         xml_path=str(xml_path),
         data=parsed,
     )
 
 
-def select_parse_data(
-    data: dict[str, object],
-    selected_keys: list[str],
-) -> dict[str, object]:
-    if not selected_keys:
-        return data
+def select_extracted_data(data: dict[str, Any], selected_key: str) -> dict[str, Any]:
+    return {selected_key: data[selected_key]}
 
-    return {key: data[key] for key in selected_keys if key in data}
+
+def _is_extracted_article(data: object) -> bool:
+    if not isinstance(data, dict):
+        return False
+    return "_meta" in data and all(key in data for key in EXTRACT_OUTPUT_KEYS)
+
+
+def _group_extracted_article(
+    raw_data: dict[str, Any],
+    *,
+    versioned_pmcid: str,
+    xml_path: Path,
+) -> dict[str, Any]:
+    return {
+        "_meta": {
+            "versioned_pmcid": versioned_pmcid,
+            "xml_path": str(xml_path),
+        },
+        "article-info": _article_info(raw_data),
+        "content": raw_data["content"],
+        "references": raw_data["references"],
+        "figures": raw_data["figures"],
+        "tables": raw_data["tables"],
+        "supporting-info": {
+            "acknowledgements": raw_data["acknowledgements"],
+            "competing_interests": raw_data["competing_interests"],
+            "data_availability": raw_data["data_availability"],
+            "supplementary_media": raw_data["supplementary_media"],
+            "author_notes": raw_data["author_notes"],
+            "related_articles": raw_data["related_articles"],
+            "custom_metadata": raw_data["custom_metadata"],
+        },
+    }
+
+
+def _article_info(raw_data: dict[str, Any]) -> dict[str, Any]:
+    journal = raw_data["journal"]
+    article = raw_data["article"]
+    abstract = raw_data["abstract"]
+
+    return _compact_dict(
+        {
+            "journal": _journal_info(journal),
+            "article_ids": _article_ids(article),
+            "title": article.get("title"),
+            "publication_date": _publication_date(article),
+            "article_type": article.get("type"),
+            "license": article.get("permissions", {}).get("license"),
+            "keywords": article.get("keywords", []),
+            "authors": _authors_with_affiliations(
+                article.get("authors", []),
+                raw_data.get("affiliations", []),
+            ),
+            "abstract": abstract.get("text"),
+            "funding_grants": article.get("funding", []),
+        },
+        keep_empty={"keywords", "authors", "funding_grants"},
+    )
+
+
+def _journal_info(journal: dict[str, Any]) -> dict[str, Any]:
+    return _compact_dict(
+        {
+            "name": journal.get("title"),
+            "publisher": journal.get("publisher", {}).get("name"),
+            "issn": _first_mapping_value(journal.get("issn", {})),
+        }
+    )
+
+
+def _article_ids(article: dict[str, Any]) -> dict[str, Any]:
+    identifiers = article.get("identifiers", {})
+    return _compact_dict(
+        {
+            "doi": identifiers.get("doi"),
+            "pmid": identifiers.get("pmid"),
+            "pmcid": identifiers.get("pmcid"),
+        }
+    )
+
+
+def _publication_date(article: dict[str, Any]) -> str | None:
+    dates = article.get("publication_dates", [])
+    for date in dates:
+        if isinstance(date, dict) and date.get("date"):
+            return date["date"]
+    return None
+
+
+def _authors_with_affiliations(
+    authors: list[dict[str, Any]],
+    affiliations: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    affiliation_text_by_id = {
+        affiliation["source_id"]: affiliation["text"]
+        for affiliation in affiliations
+        if affiliation.get("source_id") and affiliation.get("text")
+    }
+    return [
+        _compact_dict(
+            {
+                "given_names": author.get("given_names"),
+                "surname": author.get("surname"),
+                "full_name": author.get("name"),
+                "orcid": author.get("orcid"),
+                "affiliations": [
+                    affiliation_text_by_id[affiliation_id]
+                    for affiliation_id in author.get("affiliation_ids", [])
+                    if affiliation_id in affiliation_text_by_id
+                ],
+            },
+            keep_empty={"affiliations"},
+        )
+        for author in authors
+    ]
+
+
+def _first_mapping_value(data: dict[str, Any]) -> Any | None:
+    return next(iter(data.values()), None)
+
+
+def _compact_dict(
+    data: dict[str, Any],
+    *,
+    keep_empty: set[str] | None = None,
+) -> dict[str, Any]:
+    keep_empty = keep_empty or set()
+    return {
+        key: value
+        for key, value in data.items()
+        if key in keep_empty or value not in (None, "", [], {})
+    }

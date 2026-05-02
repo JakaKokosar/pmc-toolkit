@@ -50,7 +50,7 @@ class PMCFetchResult(BaseModel):
     files: list[PMCFetchFile]
 
 
-class PMCParseResult(BaseModel):
+class PMCExtractResult(BaseModel):
     versioned_pmcid: str
     xml_path: str
     data: dict[str, Any]
