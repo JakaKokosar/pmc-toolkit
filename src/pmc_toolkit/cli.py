@@ -176,16 +176,16 @@ def convert_xml(
         return
 
     def build_result():
-        from pmc_toolkit.xml_parse_api import ensure_extracted_article_cache
+        from pmc_toolkit.xml_parse_api import ensure_extracted_article
 
-        return ensure_extracted_article_cache(
+        return ensure_extracted_article(
             requested_pmcid,
             cache_dir=cache_dir,
             force=force,
         )
 
-    extracted_path = _run_command(build_result)
-    typer.echo(str(extracted_path))
+    result = _run_command(build_result)
+    _emit_json(result.data)
 
 
 def main() -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -12,29 +13,36 @@ if TYPE_CHECKING:
     from pmc_toolkit.models import PMCExtractResult
 
 
+@dataclass(frozen=True)
+class _ExtractedArticlePaths:
+    cache_root: Path
+    versioned_pmcid: str
+    extracted_path: Path
+    xml_path: Path
+
+
 def ensure_extracted_article(
     requested_pmcid: str,
     cache_dir: Path | None = None,
     force: bool = False,
 ) -> PMCExtractResult:
-    extracted_path = ensure_extracted_article_cache(
-        requested_pmcid,
-        cache_dir=cache_dir,
+    paths = _resolve_extracted_article_paths(requested_pmcid, cache_dir)
+    _ensure_extracted_article_cache(
+        paths,
         force=force,
+        cache_dir_was_explicit=cache_dir is not None,
     )
-    cache_root = storage_cache.resolve_cache_root(cache_dir)
-    versioned_pmcid = storage_utils.resolve_versioned_pmcid(requested_pmcid)
-    key = f"{versioned_pmcid}/{versioned_pmcid}.xml"
-    xml_path = storage_cache.local_object_path(cache_root, versioned_pmcid, key)
-    cached = storage_cache.read_cached_extracted_article(cache_root, versioned_pmcid)
+    cached = storage_cache.read_cached_extracted_article(
+        paths.cache_root, paths.versioned_pmcid
+    )
     if cached is None:
-        raise ValueError(f"Invalid extracted article cache: {extracted_path}")
+        raise ValueError(f"Invalid extracted article cache: {paths.extracted_path}")
 
     from pmc_toolkit.models import PMCExtractResult
 
     return PMCExtractResult(
-        versioned_pmcid=versioned_pmcid,
-        xml_path=str(xml_path),
+        versioned_pmcid=paths.versioned_pmcid,
+        xml_path=str(paths.xml_path),
         data=cached,
     )
 
@@ -44,35 +52,64 @@ def ensure_extracted_article_cache(
     cache_dir: Path | None = None,
     force: bool = False,
 ) -> Path:
+    paths = _resolve_extracted_article_paths(requested_pmcid, cache_dir)
+    return _ensure_extracted_article_cache(
+        paths,
+        force=force,
+        cache_dir_was_explicit=cache_dir is not None,
+    )
+
+
+def _resolve_extracted_article_paths(
+    requested_pmcid: str,
+    cache_dir: Path | None,
+) -> _ExtractedArticlePaths:
     cache_root = storage_cache.resolve_cache_root(cache_dir)
     versioned_pmcid = storage_utils.resolve_versioned_pmcid(requested_pmcid)
     extracted_path = storage_cache.extracted_article_cache_path(
         cache_root, versioned_pmcid
     )
-    if extracted_path.exists() and not force:
-        return extracted_path
-
     key = f"{versioned_pmcid}/{versioned_pmcid}.xml"
     xml_path = storage_cache.local_object_path(cache_root, versioned_pmcid, key)
+    return _ExtractedArticlePaths(
+        cache_root=cache_root,
+        versioned_pmcid=versioned_pmcid,
+        extracted_path=extracted_path,
+        xml_path=xml_path,
+    )
 
-    if not xml_path.exists():
+
+def _ensure_extracted_article_cache(
+    paths: _ExtractedArticlePaths,
+    *,
+    force: bool,
+    cache_dir_was_explicit: bool,
+) -> Path:
+    if paths.extracted_path.exists() and not force:
+        return paths.extracted_path
+
+    if not paths.xml_path.exists():
         raise ValueError(
             "Cached XML not found. Run "
-            f"`pmc fetch {versioned_pmcid} --ext xml"
-            f"{' --cache-dir ' + str(cache_root) if cache_dir is not None else ''}` "
-            f"first. Expected file: {xml_path}"
+            f"`pmc fetch {paths.versioned_pmcid} --ext xml"
+            f"{' --cache-dir ' + str(paths.cache_root) if cache_dir_was_explicit else ''}` "
+            f"first. Expected file: {paths.xml_path}"
         )
 
     from pmc_toolkit.xml_parse_utils import extract_article_data, load_xml
 
-    root = load_xml(xml_path)
+    root = load_xml(paths.xml_path)
     parsed = _group_extracted_article(
         extract_article_data(root),
-        versioned_pmcid=versioned_pmcid,
-        xml_path=xml_path,
+        versioned_pmcid=paths.versioned_pmcid,
+        xml_path=paths.xml_path,
     )
-    storage_cache.write_cached_extracted_article(cache_root, versioned_pmcid, parsed)
-    return extracted_path
+    storage_cache.write_cached_extracted_article(
+        paths.cache_root,
+        paths.versioned_pmcid,
+        parsed,
+    )
+    return paths.extracted_path
 
 
 def _group_extracted_article(
