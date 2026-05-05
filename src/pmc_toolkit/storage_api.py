@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from pmc_toolkit import cache as storage_cache
 from pmc_toolkit import storage_utils
+from pmc_toolkit.validators import parse_pmcid
 
 if TYPE_CHECKING:
     from pmc_toolkit.models import (
@@ -24,9 +25,14 @@ if TYPE_CHECKING:
 def list_versions(pmcid: str) -> PMCVersions:
     from pmc_toolkit.models import PMCVersions
 
-    versions = storage_utils.list_versioned_pmcids(pmcid)
+    base_pmcid, version = parse_pmcid(pmcid)
+    if version is not None:
+        raise ValueError(
+            "list_versions expects a base PMCID like 'PMC11370360', not a versioned ID."
+        )
+    versions = storage_utils.list_versioned_pmcids(base_pmcid)
     return PMCVersions(
-        pmcid=pmcid,
+        pmcid=base_pmcid,
         versions=sorted(set(versions), key=storage_utils.version_number),
     )
 
@@ -75,10 +81,14 @@ def fetch_files(
     article_dir.mkdir(parents=True, exist_ok=True)
 
     results: list[PMCFetchFile] = []
+    mkdir_done: set[Path] = set()
 
     for key in keys:
         dest = storage_cache.local_object_path(cache_root, versioned_pmcid, key)
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        parent = dest.parent
+        if parent not in mkdir_done:
+            parent.mkdir(parents=True, exist_ok=True)
+            mkdir_done.add(parent)
 
         if dest.exists() and not force:
             results.append(

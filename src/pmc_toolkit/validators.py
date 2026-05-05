@@ -1,16 +1,20 @@
 import re
 
 _PMCID_RE = re.compile(r"^PMC\d+$")
-_INVALID_PMCID_MESSAGE = "Invalid PMC identifier: {value!r}. Expected format like 'PMC11370360' or 'PMC11370360.1'."
+_INVALID_BASE_PMCID_MESSAGE = (
+    "Invalid PMC identifier: {value!r}. Expected format like 'PMC11370360'."
+)
+_INVALID_PMCID_MESSAGE = (
+    "Invalid PMC identifier: {value!r}. "
+    "Expected format like 'PMC11370360' or 'PMC11370360.1'."
+)
 
 
 def normalize_pmcid(value: str) -> str:
     pmcid = value.strip().upper()
 
     if not _PMCID_RE.fullmatch(pmcid):
-        raise ValueError(
-            f"Invalid PMCID: {value!r}. Expected format like 'PMC11370360'."
-        )
+        raise ValueError(_INVALID_BASE_PMCID_MESSAGE.format(value=value))
 
     return pmcid
 

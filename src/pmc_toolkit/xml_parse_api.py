@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 
 from pmc_toolkit import cache as storage_cache
 from pmc_toolkit import storage_utils
+from pmc_toolkit.xml_parse_utils import _compact_dict
+
 
 if TYPE_CHECKING:
     from pmc_toolkit.models import PMCExtractResult
@@ -27,14 +29,17 @@ def ensure_extracted_article(
     force: bool = False,
 ) -> PMCExtractResult:
     paths = _resolve_extracted_article_paths(requested_pmcid, cache_dir)
-    _ensure_extracted_article_cache(
+    built = _ensure_extracted_article_cache(
         paths,
         force=force,
         cache_dir_was_explicit=cache_dir is not None,
     )
-    cached = storage_cache.read_cached_extracted_article(
-        paths.cache_root, paths.versioned_pmcid
-    )
+    if built is not None:
+        cached = built
+    else:
+        cached = storage_cache.read_cached_extracted_article(
+            paths.cache_root, paths.versioned_pmcid
+        )
     if cached is None:
         raise ValueError(f"Invalid extracted article cache: {paths.extracted_path}")
 
@@ -53,11 +58,12 @@ def ensure_extracted_article_cache(
     force: bool = False,
 ) -> Path:
     paths = _resolve_extracted_article_paths(requested_pmcid, cache_dir)
-    return _ensure_extracted_article_cache(
+    _ensure_extracted_article_cache(
         paths,
         force=force,
         cache_dir_was_explicit=cache_dir is not None,
     )
+    return paths.extracted_path
 
 
 def _resolve_extracted_article_paths(
@@ -84,9 +90,9 @@ def _ensure_extracted_article_cache(
     *,
     force: bool,
     cache_dir_was_explicit: bool,
-) -> Path:
+) -> dict[str, Any] | None:
     if paths.extracted_path.exists() and not force:
-        return paths.extracted_path
+        return None
 
     if not paths.xml_path.exists():
         raise ValueError(
@@ -109,7 +115,7 @@ def _ensure_extracted_article_cache(
         paths.versioned_pmcid,
         parsed,
     )
-    return paths.extracted_path
+    return parsed
 
 
 def _group_extracted_article(
@@ -225,15 +231,3 @@ def _authors_with_affiliations(
 def _first_mapping_value(data: dict[str, Any]) -> Any | None:
     return next(iter(data.values()), None)
 
-
-def _compact_dict(
-    data: dict[str, Any],
-    *,
-    keep_empty: set[str] | None = None,
-) -> dict[str, Any]:
-    keep_empty = keep_empty or set()
-    return {
-        key: value
-        for key, value in data.items()
-        if key in keep_empty or value not in (None, "", [], {})
-    }

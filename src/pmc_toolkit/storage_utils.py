@@ -158,4 +158,12 @@ def key_matches_extensions(key: str, extensions: set[str] | None) -> bool:
 
 
 def download_object(key: str, dest: Path) -> None:
-    _get_s3_client().download_file(BUCKET, key, str(dest))
+    from botocore.exceptions import ClientError
+
+    try:
+        _get_s3_client().download_file(BUCKET, key, str(dest))
+    except ClientError as exc:
+        error_code = exc.response.get("Error", {}).get("Code")
+        if error_code in {"NoSuchKey", "404"}:
+            raise ValueError(f"No object found for key: {key!r}.") from exc
+        raise
