@@ -109,21 +109,21 @@ commands for the same article version read that JSON cache.
 
 ```bash
 uv run pmc fetch PMC11370360.1 --ext xml
-uv run pmc extract article-info PMC11370360.1
+uv run pmc extract article_info PMC11370360.1
 ```
 
 Choose one output group per command:
 
 ```bash
-uv run pmc extract article-info PMC11370360.1
+uv run pmc extract article_info PMC11370360.1
 uv run pmc extract content PMC11370360.1
 uv run pmc extract references PMC11370360.1
 uv run pmc extract figures PMC11370360.1
 uv run pmc extract tables PMC11370360.1
-uv run pmc extract supporting-info PMC11370360.1
+uv run pmc extract supporting_info PMC11370360.1
 ```
 
-`article-info.publication_date` currently uses the first publication date found
+`article_info.publication_date` currently uses the first publication date found
 in the XML. If downstream consumers need to distinguish date types such as
 `epub`, `ppub`, or `collection`, the output can be extended later.
 

@@ -14,8 +14,8 @@ XMLParser = etree.XMLParser(
 )
 REFERENCE_SEPARATOR_PATTERN = re.compile(r"^[\s,;]+$")
 EXTRACT_OUTPUT_KEY_DESCRIPTIONS = {
-    "article-info": (
-        "article-info.journal, article_ids, title, publication_date, article_type, "
+    "article_info": (
+        "article_info.journal, article_ids, title, publication_date, article_type, "
         "license, keywords, authors[], abstract, and funding_grants[]"
     ),
     "content": (
@@ -28,7 +28,7 @@ EXTRACT_OUTPUT_KEY_DESCRIPTIONS = {
     ),
     "figures": "figures[] items with source_id, label, caption, and graphics",
     "tables": "tables[] items with source_id, label, caption, rows, and footnotes",
-    "supporting-info": (
+    "supporting_info": (
         "acknowledgements, competing_interests, data_availability, "
         "supplementary_media, author_notes, related_articles, and custom_metadata"
     ),

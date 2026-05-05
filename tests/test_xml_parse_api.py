@@ -74,22 +74,22 @@ def test_ensure_extracted_article_reads_xml_and_writes_extracted_cache(
     assert result.versioned_pmcid == "PMC11370360.1"
     assert result.xml_path == str(article_dir / "PMC11370360.1.xml")
     assert result.data["_meta"]["versioned_pmcid"] == "PMC11370360.1"
-    assert result.data["article-info"]["journal"]["name"] == "bioRxiv"
-    assert result.data["article-info"]["journal"]["issn"] == "2692-8205"
-    assert result.data["article-info"]["article_ids"] == {
+    assert result.data["article_info"]["journal"]["name"] == "bioRxiv"
+    assert result.data["article_info"]["journal"]["issn"] == "2692-8205"
+    assert result.data["article_info"]["article_ids"] == {
         "doi": "10.1101/example",
         "pmid": "39229047",
         "pmcid": "PMC11370360",
     }
-    assert result.data["article-info"]["title"] == "Cached XML"
-    assert result.data["article-info"]["publication_date"] == "2024-09-20"
-    assert result.data["article-info"]["article_type"] == "research-article"
-    assert result.data["article-info"]["keywords"] == ["neuroprosthesis"]
-    assert result.data["article-info"]["authors"][0]["affiliations"] == [
+    assert result.data["article_info"]["title"] == "Cached XML"
+    assert result.data["article_info"]["publication_date"] == "2024-09-20"
+    assert result.data["article_info"]["article_type"] == "research-article"
+    assert result.data["article_info"]["keywords"] == ["neuroprosthesis"]
+    assert result.data["article_info"]["authors"][0]["affiliations"] == [
         "Department of Examples"
     ]
-    assert result.data["article-info"]["abstract"] == "Example abstract."
-    assert result.data["article-info"]["funding_grants"] == [
+    assert result.data["article_info"]["abstract"] == "Example abstract."
+    assert result.data["article_info"]["funding_grants"] == [
         {"institution": "NIH", "award_id": "1DP2DC021055"}
     ]
     assert result.data["content"]["sections"][0]["title"] == "Intro"
@@ -105,12 +105,12 @@ def test_ensure_extracted_article_reads_existing_extracted_cache(tmp_path) -> No
     (article_dir / "PMC11370360.1.xml").write_text("<article />", encoding="utf-8")
     cached_data = {
         "_meta": {"versioned_pmcid": "PMC11370360.1"},
-        "article-info": {"title": "Cached JSON"},
+        "article_info": {"title": "Cached JSON"},
         "content": {},
         "references": [],
         "figures": [],
         "tables": [],
-        "supporting-info": {},
+        "supporting_info": {},
     }
     (article_dir / ".pmc-extracted-article.json").write_text(
         json.dumps(cached_data),

@@ -86,12 +86,12 @@ def _group_extracted_article(
             "versioned_pmcid": versioned_pmcid,
             "xml_path": str(xml_path),
         },
-        "article-info": _article_info(raw_data),
+        "article_info": _article_info(raw_data),
         "content": raw_data["content"],
         "references": raw_data["references"],
         "figures": raw_data["figures"],
         "tables": raw_data["tables"],
-        "supporting-info": {
+        "supporting_info": {
             "acknowledgements": raw_data["acknowledgements"],
             "competing_interests": raw_data["competing_interests"],
             "data_availability": raw_data["data_availability"],
