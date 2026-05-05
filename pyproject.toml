@@ -8,6 +8,25 @@ version = "0.1.0"
 description = "Python toolkit and CLI for exploring, downloading, and parsing PMC article data."
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jaka Kokosar" }]
+keywords = ["pmc", "pubmed", "bioinformatics", "ncbi", "open-access", "full-text"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Text Processing :: Markup :: XML",
+    "Typing :: Typed",
+]
 dependencies = [
     "boto3>=1.42.93",
     "lxml>=6.1.0",
@@ -15,6 +34,11 @@ dependencies = [
     "pydantic>=2.13.3",
     "typer>=0.24.1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/JakaKokosar/pmc-toolkit"
+Repository = "https://github.com/JakaKokosar/pmc-toolkit"
+Issues = "https://github.com/JakaKokosar/pmc-toolkit/issues"
 
 [dependency-groups]
 dev = [

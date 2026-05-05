@@ -230,4 +230,3 @@ def _authors_with_affiliations(
 
 def _first_mapping_value(data: dict[str, Any]) -> Any | None:
     return next(iter(data.values()), None)
-
