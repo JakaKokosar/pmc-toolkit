@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -40,7 +41,10 @@ def test_versions_subcommand_outputs_versions(monkeypatch) -> None:
     result = runner.invoke(app, ["versions", "PMC11370360"])
 
     assert result.exit_code == 0
-    assert result.stdout.splitlines() == ["PMC11370360.1", "PMC11370360.2"]
+    assert json.loads(result.stdout) == {
+        "pmcid": "PMC11370360",
+        "versions": ["PMC11370360.1", "PMC11370360.2"],
+    }
 
 
 def test_versions_subcommand_rejects_versioned_identifier() -> None:
@@ -80,11 +84,12 @@ def test_metadata_subcommand_uses_latest_version_by_default(monkeypatch) -> None
 
     monkeypatch.setattr("pmc_toolkit.cli.get_metadata", fake_get_metadata)
 
-    result = runner.invoke(app, ["metadata", "PMC11370360", "--json"])
+    result = runner.invoke(app, ["metadata", "PMC11370360"])
 
     assert result.exit_code == 0
-    assert '"pmcid": "PMC11370360"' in result.stdout
-    assert '"version": 2' in result.stdout
+    payload = json.loads(result.stdout)
+    assert payload["pmcid"] == "PMC11370360"
+    assert payload["version"] == 2
 
 
 def test_metadata_subcommand_accepts_explicit_version(monkeypatch) -> None:
@@ -114,8 +119,9 @@ def test_metadata_subcommand_accepts_explicit_version(monkeypatch) -> None:
     result = runner.invoke(app, ["metadata", "PMC11370360.1"])
 
     assert result.exit_code == 0
-    assert "pmcid: PMC11370360" in result.stdout
-    assert "version: 1" in result.stdout
+    payload = json.loads(result.stdout)
+    assert payload["pmcid"] == "PMC11370360"
+    assert payload["version"] == 1
 
 
 def test_files_subcommand_lists_keys(monkeypatch) -> None:
@@ -137,8 +143,13 @@ def test_files_subcommand_lists_keys(monkeypatch) -> None:
 
     assert result.exit_code == 0
     assert captured == {"requested_pmcid": "PMC11370360.1"}
-    assert "PMC11370360.1/PMC11370360.1.xml" in result.stdout
-    assert "PMC11370360.1/PMC11370360.1.pdf" in result.stdout
+    assert json.loads(result.stdout) == {
+        "versioned_pmcid": "PMC11370360.1",
+        "keys": [
+            "PMC11370360.1/PMC11370360.1.xml",
+            "PMC11370360.1/PMC11370360.1.pdf",
+        ],
+    }
 
 
 def test_fetch_subcommand_invokes_storage_with_options(monkeypatch, tmp_path) -> None:
@@ -183,7 +194,15 @@ def test_fetch_subcommand_invokes_storage_with_options(monkeypatch, tmp_path) ->
     assert captured["extensions"] == ["pdf"]
     assert captured["cache_dir"] == Path(str(tmp_path))
     assert captured["force"] is True
-    assert "[downloaded]" in result.stdout
+    payload = json.loads(result.stdout)
+    assert payload["versioned_pmcid"] == "PMC11370360.1"
+    assert payload["files"] == [
+        {
+            "key": "PMC11370360.1/PMC11370360.1.pdf",
+            "local_path": str(tmp_path / "PMC11370360.1" / "PMC11370360.1.pdf"),
+            "action": "downloaded",
+        }
+    ]
 
 
 def test_fetch_subcommand_accepts_comma_separated_extensions(
@@ -219,6 +238,7 @@ def test_fetch_subcommand_accepts_comma_separated_extensions(
     assert result.exit_code == 0, result.stdout
     assert captured["requested_pmcid"] == "PMC11370360.2"
     assert captured["extensions"] == ["xml,pdf,jpg"]
+    assert json.loads(result.stdout)["files"] == []
 
 
 def test_extract_subcommand_outputs_requested_json_group(monkeypatch, tmp_path) -> None:

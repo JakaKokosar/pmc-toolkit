@@ -42,28 +42,24 @@ Show the available commands:
 uv run pmc --help
 ```
 
+CLI commands print indented JSON to stdout.
+
 List versions for a PMC article:
 
 ```bash
 uv run pmc versions PMC11370360
 ```
 
-Get JSON output:
-
-```bash
-uv run pmc versions PMC11370360 --json
-```
-
 Fetch metadata for the latest available version of a PMCID:
 
 ```bash
-uv run pmc metadata PMC11370360 --json
+uv run pmc metadata PMC11370360
 ```
 
 Fetch metadata for a specific version:
 
 ```bash
-uv run pmc metadata PMC11370360.1 --json
+uv run pmc metadata PMC11370360.1
 ```
 
 List every object key for an article version (including media and supplements).
@@ -116,7 +112,7 @@ uv run pmc fetch PMC11370360.1 --ext xml
 uv run pmc extract article-info PMC11370360.1
 ```
 
-Choose one output group per command. Output is JSON by default:
+Choose one output group per command:
 
 ```bash
 uv run pmc extract article-info PMC11370360.1

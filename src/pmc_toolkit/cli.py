@@ -1,7 +1,7 @@
 from collections.abc import Callable
 import json
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import typer
 
@@ -41,14 +41,13 @@ def _run_command(action: Callable[[], CommandResult]) -> CommandResult:
         raise typer.Exit(code=1) from exc
 
 
+def _emit_json(payload: Any) -> None:
+    typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
 @app.command("versions")
 def versions(
     pmcid: str = typer.Argument(..., help="PMC accession ID, e.g. PMC11370360"),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Print machine-readable JSON output.",
-    ),
 ) -> None:
     """
     List all versions belonging to a PMCID.
@@ -63,13 +62,7 @@ def versions(
         return list_versions(normalized_pmcid)
 
     result = _run_command(build_result)
-
-    if json_output:
-        typer.echo(result.model_dump_json(indent=2))
-        return
-
-    for version in result.versions:
-        typer.echo(version)
+    _emit_json(result.model_dump(mode="json"))
 
 
 @app.command("metadata")
@@ -77,11 +70,6 @@ def metadata(
     requested_pmcid: str = typer.Argument(
         ...,
         help="PMC accession ID or version ID, e.g. PMC11370360 or PMC11370360.1",
-    ),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Print machine-readable JSON output.",
     ),
 ) -> None:
     """
@@ -92,13 +80,7 @@ def metadata(
         return get_metadata(requested_pmcid)
 
     result = _run_command(build_result)
-
-    if json_output:
-        typer.echo(result.model_dump_json(indent=2))
-        return
-
-    for key, value in result.model_dump().items():
-        typer.echo(f"{key}: {value}")
+    _emit_json(result.model_dump(mode="json"))
 
 
 @app.command("files")
@@ -106,11 +88,6 @@ def files(
     requested_pmcid: str = typer.Argument(
         ...,
         help="PMC accession ID or version ID, e.g. PMC11370360 or PMC11370360.1",
-    ),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Print machine-readable JSON output.",
     ),
 ) -> None:
     """
@@ -121,13 +98,7 @@ def files(
         return list_files(requested_pmcid)
 
     result = _run_command(build_result)
-
-    if json_output:
-        typer.echo(result.model_dump_json(indent=2))
-        return
-
-    for key in result.keys:
-        typer.echo(key)
+    _emit_json(result.model_dump(mode="json"))
 
 
 @app.command("fetch")
@@ -160,11 +131,6 @@ def fetch(
         "-f",
         help="Re-download files even when they already exist in the cache.",
     ),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Print machine-readable JSON output.",
-    ),
 ) -> None:
     """
     Download all (or filtered) files for a PMC article version into a local cache.
@@ -179,14 +145,7 @@ def fetch(
         )
 
     result = _run_command(build_result)
-
-    if json_output:
-        typer.echo(result.model_dump_json(indent=2))
-        return
-
-    typer.echo(f"Cache directory: {result.cache_dir}")
-    for file in result.files:
-        typer.echo(f"[{file.action.value}] {file.local_path}")
+    _emit_json(result.model_dump(mode="json"))
 
 
 def _extract_json(
@@ -198,8 +157,7 @@ def _extract_json(
         lambda: ensure_extracted_article(requested_pmcid, cache_dir=cache_dir)
     )
     output = select_extracted_data(result.data, output_key)
-
-    typer.echo(json.dumps(output, indent=2, ensure_ascii=False))
+    _emit_json(output)
 
 
 @extract_app.command("article-info")
