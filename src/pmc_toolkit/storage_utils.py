@@ -2,21 +2,17 @@
 :mod:`pmc_toolkit.cache`. Not the Python import surface—use
 :mod:`pmc_toolkit.storage_api`."""
 
-import json
+from __future__ import annotations
+
 from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import boto3
-from botocore import UNSIGNED
-from botocore.config import Config
-from botocore.exceptions import ClientError
-
 from pmc_toolkit import cache as storage_cache
-from pmc_toolkit.models import PMCMetadata
 from pmc_toolkit.validators import parse_pmcid
 
 if TYPE_CHECKING:
+    from pmc_toolkit.models import PMCMetadata
     from types_boto3_s3.client import S3Client
 
 BUCKET = "pmc-oa-opendata"
@@ -26,6 +22,10 @@ REGION = "us-east-1"
 # Shared S3 setup
 @cache
 def _get_s3_client() -> "S3Client":
+    import boto3
+    from botocore import UNSIGNED
+    from botocore.config import Config
+
     return boto3.client(
         "s3", region_name=REGION, config=Config(signature_version=UNSIGNED)
     )
@@ -72,13 +72,20 @@ def _latest_versioned_pmcid(pmcid: str) -> str:
 def resolve_versioned_pmcid(requested_pmcid: str) -> str:
     """Resolve a PMCID input to an explicit version, using the latest version when omitted."""
     pmcid, version = parse_pmcid(requested_pmcid)
-    return f"{pmcid}.{version}" if version is not None else _latest_versioned_pmcid(pmcid)
+    return (
+        f"{pmcid}.{version}" if version is not None else _latest_versioned_pmcid(pmcid)
+    )
 
 
 # Metadata S3 helpers
 def read_metadata(versioned_pmcid: str) -> PMCMetadata:
     """Fetch article metadata from the S3 metadata index for a specific version."""
     key = f"metadata/{versioned_pmcid}.json"
+
+    import json
+
+    from botocore.exceptions import ClientError
+    from pmc_toolkit.models import PMCMetadata
 
     s3 = _get_s3_client()
 
@@ -87,7 +94,9 @@ def read_metadata(versioned_pmcid: str) -> PMCMetadata:
     except ClientError as exc:
         error_code = exc.response.get("Error", {}).get("Code")
         if error_code in {"NoSuchKey", "404"}:
-            raise ValueError(f"No metadata found for article: {versioned_pmcid}.") from exc
+            raise ValueError(
+                f"No metadata found for article: {versioned_pmcid}."
+            ) from exc
         raise
 
     payload = json.loads(response["Body"].read())

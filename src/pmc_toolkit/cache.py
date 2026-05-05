@@ -1,18 +1,20 @@
 """Local filesystem cache helpers for PMC metadata, manifests, and downloads."""
 
-import json
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from platformdirs import user_cache_dir
-
-from pmc_toolkit.models import PMCMetadata
+if TYPE_CHECKING:
+    from pmc_toolkit.models import PMCMetadata
 
 OBJECT_KEYS_CACHE_FILENAME = ".pmc-object-keys.json"
 EXTRACTED_ARTICLE_CACHE_FILENAME = ".pmc-extracted-article.json"
 
 
 def default_cache_root() -> Path:
+    from platformdirs import user_cache_dir
+
     return Path(user_cache_dir("pmc-toolkit", appauthor=False))
 
 
@@ -43,6 +45,8 @@ def _read_json_file(path: Path) -> Any | None:
     if not path.exists():
         return None
 
+    import json
+
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -50,6 +54,8 @@ def read_cached_metadata(cache_root: Path, versioned_pmcid: str) -> PMCMetadata 
     payload = _read_json_file(metadata_cache_path(cache_root, versioned_pmcid))
     if payload is None:
         return None
+
+    from pmc_toolkit.models import PMCMetadata
 
     return PMCMetadata.model_validate(payload)
 
@@ -77,6 +83,8 @@ def read_cached_object_keys(cache_root: Path, versioned_pmcid: str) -> list[str]
 def write_cached_object_keys(
     cache_root: Path, versioned_pmcid: str, keys: list[str]
 ) -> None:
+    import json
+
     path = object_keys_cache_path(cache_root, versioned_pmcid)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(sorted(keys), indent=2), encoding="utf-8")
@@ -88,7 +96,7 @@ def read_cached_extracted_article(
     path = extracted_article_cache_path(cache_root, versioned_pmcid)
     try:
         payload = _read_json_file(path)
-    except json.JSONDecodeError:
+    except ValueError:
         return None
     if payload is None:
         return None
@@ -100,6 +108,8 @@ def read_cached_extracted_article(
 def write_cached_extracted_article(
     cache_root: Path, versioned_pmcid: str, data: dict[str, Any]
 ) -> None:
+    import json
+
     path = extracted_article_cache_path(cache_root, versioned_pmcid)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")

@@ -3,21 +3,27 @@
 CLI commands use this API; low-level S3 helpers live in :mod:`pmc_toolkit.storage_utils`
 and local cache helpers live in :mod:`pmc_toolkit.cache`."""
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pmc_toolkit import cache as storage_cache
 from pmc_toolkit import storage_utils
-from pmc_toolkit.models import (
-    FetchAction,
-    PMCFetchFile,
-    PMCFetchResult,
-    PMCFiles,
-    PMCMetadata,
-    PMCVersions,
-)
+
+if TYPE_CHECKING:
+    from pmc_toolkit.models import (
+        PMCFetchFile,
+        PMCFetchResult,
+        PMCFiles,
+        PMCMetadata,
+        PMCVersions,
+    )
 
 
 def list_versions(pmcid: str) -> PMCVersions:
+    from pmc_toolkit.models import PMCVersions
+
     versions = storage_utils.list_versioned_pmcids(pmcid)
     return PMCVersions(
         pmcid=pmcid,
@@ -39,6 +45,8 @@ def get_metadata(requested_pmcid: str) -> PMCMetadata:
 
 
 def list_files(requested_pmcid: str) -> PMCFiles:
+    from pmc_toolkit.models import PMCFiles
+
     cache_root = storage_cache.resolve_cache_root()
     versioned_pmcid = storage_utils.resolve_versioned_pmcid(requested_pmcid)
     keys = storage_utils.read_or_cache_object_keys(cache_root, versioned_pmcid)
@@ -52,6 +60,8 @@ def fetch_files(
     extensions: list[str] | None = None,
     force: bool = False,
 ) -> PMCFetchResult:
+    from pmc_toolkit.models import FetchAction, PMCFetchFile, PMCFetchResult
+
     cache_root = storage_cache.resolve_cache_root(cache_dir)
     versioned_pmcid = storage_utils.resolve_versioned_pmcid(requested_pmcid)
     all_keys = storage_utils.read_or_cache_object_keys(cache_root, versioned_pmcid)

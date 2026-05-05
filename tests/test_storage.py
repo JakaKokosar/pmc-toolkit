@@ -54,7 +54,9 @@ def _metadata_payload(version: int) -> dict:
     }
 
 
-def _write_cached_metadata(cache_root: Path, versioned_pmcid: str, payload: dict) -> None:
+def _write_cached_metadata(
+    cache_root: Path, versioned_pmcid: str, payload: dict
+) -> None:
     article_dir = cache_root / versioned_pmcid
     article_dir.mkdir(parents=True, exist_ok=True)
     (article_dir / f"{versioned_pmcid}.json").write_text(
@@ -250,9 +252,7 @@ def test_list_files_fetches_and_caches_keys_on_cache_miss(
     ]
     cached = json.loads(
         (
-            tmp_path
-            / "PMC11370360.1"
-            / storage_cache.OBJECT_KEYS_CACHE_FILENAME
+            tmp_path / "PMC11370360.1" / storage_cache.OBJECT_KEYS_CACHE_FILENAME
         ).read_text(encoding="utf-8")
     )
     assert cached == sorted(keys)
@@ -359,9 +359,7 @@ def test_fetch_files_downloads_and_skips_existing(monkeypatch, tmp_path) -> None
     ]
     cached = json.loads(
         (
-            tmp_path
-            / "PMC11370360.1"
-            / storage_cache.OBJECT_KEYS_CACHE_FILENAME
+            tmp_path / "PMC11370360.1" / storage_cache.OBJECT_KEYS_CACHE_FILENAME
         ).read_text(encoding="utf-8")
     )
     assert cached == sorted(keys)
@@ -534,9 +532,7 @@ def test_fetch_files_uses_custom_cache_dir_after_s3_version_resolution(
             downloads.append(Key)
             Path(Filename).touch()
 
-    monkeypatch.setattr(
-        "pmc_toolkit.cache.default_cache_root", lambda: default_root
-    )
+    monkeypatch.setattr("pmc_toolkit.cache.default_cache_root", lambda: default_root)
     monkeypatch.setattr(
         "pmc_toolkit.storage_utils.list_versioned_pmcids",
         lambda pmcid: ["PMC11370360.1"],

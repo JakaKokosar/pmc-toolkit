@@ -1,29 +1,57 @@
 """Public API for extracting cached PMC full-text XML files."""
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pmc_toolkit import cache as storage_cache
 from pmc_toolkit import storage_utils
-from pmc_toolkit.models import PMCExtractResult
-from pmc_toolkit.xml_parse_utils import extract_article_data, load_xml
 
-EXTRACT_OUTPUT_KEYS = (
-    "article-info",
-    "content",
-    "references",
-    "figures",
-    "tables",
-    "supporting-info",
-)
+if TYPE_CHECKING:
+    from pmc_toolkit.models import PMCExtractResult
 
 
 def ensure_extracted_article(
     requested_pmcid: str,
     cache_dir: Path | None = None,
+    force: bool = False,
 ) -> PMCExtractResult:
+    extracted_path = ensure_extracted_article_cache(
+        requested_pmcid,
+        cache_dir=cache_dir,
+        force=force,
+    )
     cache_root = storage_cache.resolve_cache_root(cache_dir)
     versioned_pmcid = storage_utils.resolve_versioned_pmcid(requested_pmcid)
+    key = f"{versioned_pmcid}/{versioned_pmcid}.xml"
+    xml_path = storage_cache.local_object_path(cache_root, versioned_pmcid, key)
+    cached = storage_cache.read_cached_extracted_article(cache_root, versioned_pmcid)
+    if cached is None:
+        raise ValueError(f"Invalid extracted article cache: {extracted_path}")
+
+    from pmc_toolkit.models import PMCExtractResult
+
+    return PMCExtractResult(
+        versioned_pmcid=versioned_pmcid,
+        xml_path=str(xml_path),
+        data=cached,
+    )
+
+
+def ensure_extracted_article_cache(
+    requested_pmcid: str,
+    cache_dir: Path | None = None,
+    force: bool = False,
+) -> Path:
+    cache_root = storage_cache.resolve_cache_root(cache_dir)
+    versioned_pmcid = storage_utils.resolve_versioned_pmcid(requested_pmcid)
+    extracted_path = storage_cache.extracted_article_cache_path(
+        cache_root, versioned_pmcid
+    )
+    if extracted_path.exists() and not force:
+        return extracted_path
+
     key = f"{versioned_pmcid}/{versioned_pmcid}.xml"
     xml_path = storage_cache.local_object_path(cache_root, versioned_pmcid, key)
 
@@ -35,13 +63,7 @@ def ensure_extracted_article(
             f"first. Expected file: {xml_path}"
         )
 
-    cached = storage_cache.read_cached_extracted_article(cache_root, versioned_pmcid)
-    if cached is not None and _is_extracted_article(cached):
-        return PMCExtractResult(
-            versioned_pmcid=versioned_pmcid,
-            xml_path=str(xml_path),
-            data=cached,
-        )
+    from pmc_toolkit.xml_parse_utils import extract_article_data, load_xml
 
     root = load_xml(xml_path)
     parsed = _group_extracted_article(
@@ -50,21 +72,7 @@ def ensure_extracted_article(
         xml_path=xml_path,
     )
     storage_cache.write_cached_extracted_article(cache_root, versioned_pmcid, parsed)
-    return PMCExtractResult(
-        versioned_pmcid=versioned_pmcid,
-        xml_path=str(xml_path),
-        data=parsed,
-    )
-
-
-def select_extracted_data(data: dict[str, Any], selected_key: str) -> dict[str, Any]:
-    return {selected_key: data[selected_key]}
-
-
-def _is_extracted_article(data: object) -> bool:
-    if not isinstance(data, dict):
-        return False
-    return "_meta" in data and all(key in data for key in EXTRACT_OUTPUT_KEYS)
+    return extracted_path
 
 
 def _group_extracted_article(

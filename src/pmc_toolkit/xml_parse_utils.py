@@ -13,6 +13,26 @@ XMLParser = etree.XMLParser(
     remove_blank_text=True,
 )
 REFERENCE_SEPARATOR_PATTERN = re.compile(r"^[\s,;]+$")
+EXTRACT_OUTPUT_KEY_DESCRIPTIONS = {
+    "article-info": (
+        "article-info.journal, article_ids, title, publication_date, article_type, "
+        "license, keywords, authors[], abstract, and funding_grants[]"
+    ),
+    "content": (
+        "content.paragraphs[] and content.sections[]; objects include source_id, "
+        "section_id, title, text, reference_ids, figure_ids, and table_ids"
+    ),
+    "references": (
+        "references[] items with source_id, label, text, publication_type, "
+        "identifiers, article_title, source, year, volume, issue, and pages"
+    ),
+    "figures": "figures[] items with source_id, label, caption, and graphics",
+    "tables": "tables[] items with source_id, label, caption, rows, and footnotes",
+    "supporting-info": (
+        "acknowledgements, competing_interests, data_availability, "
+        "supplementary_media, author_notes, related_articles, and custom_metadata"
+    ),
+}
 
 
 def load_xml(path: Path) -> Any:

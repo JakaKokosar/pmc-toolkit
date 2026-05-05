@@ -218,7 +218,10 @@ def test_extract_article_data_returns_content_and_back_matter(tmp_path: Path) ->
     assert data["content"]["sections"][0]["sections"][0]["title"] == "Background"
     assert data["content"]["sections"][0]["sections"][0]["section_id"] == "1.1"
     assert "content_id" not in data["content"]["sections"][0]["sections"][0]
-    assert "content_id" not in data["content"]["sections"][0]["sections"][0]["paragraphs"][0]
+    assert (
+        "content_id"
+        not in data["content"]["sections"][0]["sections"][0]["paragraphs"][0]
+    )
     assert data["content"]["sections"][1]["source_id"] == "s2"
     assert data["content"]["sections"][1]["section_id"] == "2"
     assert "content_id" not in data["content"]["sections"][1]

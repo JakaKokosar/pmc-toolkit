@@ -6,7 +6,6 @@ from typer.testing import CliRunner
 from pmc_toolkit.cli import app
 from pmc_toolkit.models import (
     FetchAction,
-    PMCExtractResult,
     PMCFetchFile,
     PMCFetchResult,
     PMCFiles,
@@ -25,7 +24,6 @@ def test_help_shows_versions_subcommand() -> None:
     assert "metadata" in result.stdout
     assert "files" in result.stdout
     assert "fetch" in result.stdout
-    assert "extract" in result.stdout
 
 
 def test_versions_subcommand_outputs_versions(monkeypatch) -> None:
@@ -36,7 +34,7 @@ def test_versions_subcommand_outputs_versions(monkeypatch) -> None:
             versions=["PMC11370360.1", "PMC11370360.2"],
         )
 
-    monkeypatch.setattr("pmc_toolkit.cli.list_versions", fake_list_versions)
+    monkeypatch.setattr("pmc_toolkit.storage_api.list_versions", fake_list_versions)
 
     result = runner.invoke(app, ["versions", "PMC11370360"])
 
@@ -82,7 +80,7 @@ def test_metadata_subcommand_uses_latest_version_by_default(monkeypatch) -> None
             text_url="s3://pmc-oa-opendata/PMC11370360.2/PMC11370360.2.txt",
         )
 
-    monkeypatch.setattr("pmc_toolkit.cli.get_metadata", fake_get_metadata)
+    monkeypatch.setattr("pmc_toolkit.storage_api.get_metadata", fake_get_metadata)
 
     result = runner.invoke(app, ["metadata", "PMC11370360"])
 
@@ -114,7 +112,7 @@ def test_metadata_subcommand_accepts_explicit_version(monkeypatch) -> None:
             text_url="s3://pmc-oa-opendata/PMC11370360.1/PMC11370360.1.txt",
         )
 
-    monkeypatch.setattr("pmc_toolkit.cli.get_metadata", fake_get_metadata)
+    monkeypatch.setattr("pmc_toolkit.storage_api.get_metadata", fake_get_metadata)
 
     result = runner.invoke(app, ["metadata", "PMC11370360.1"])
 
@@ -137,7 +135,7 @@ def test_files_subcommand_lists_keys(monkeypatch) -> None:
             ],
         )
 
-    monkeypatch.setattr("pmc_toolkit.cli.list_files", fake_list_files)
+    monkeypatch.setattr("pmc_toolkit.storage_api.list_files", fake_list_files)
 
     result = runner.invoke(app, ["files", "PMC11370360.1"])
 
@@ -174,7 +172,7 @@ def test_fetch_subcommand_invokes_storage_with_options(monkeypatch, tmp_path) ->
             ],
         )
 
-    monkeypatch.setattr("pmc_toolkit.cli.fetch_files", fake_fetch)
+    monkeypatch.setattr("pmc_toolkit.storage_api.fetch_files", fake_fetch)
 
     result = runner.invoke(
         app,
@@ -223,7 +221,7 @@ def test_fetch_subcommand_accepts_comma_separated_extensions(
             files=[],
         )
 
-    monkeypatch.setattr("pmc_toolkit.cli.fetch_files", fake_fetch)
+    monkeypatch.setattr("pmc_toolkit.storage_api.fetch_files", fake_fetch)
 
     result = runner.invoke(
         app,
@@ -241,88 +239,11 @@ def test_fetch_subcommand_accepts_comma_separated_extensions(
     assert json.loads(result.stdout)["files"] == []
 
 
-def test_extract_subcommand_outputs_requested_json_group(monkeypatch, tmp_path) -> None:
-    def fake_extract(requested_pmcid, cache_dir=None):
-        assert requested_pmcid == "PMC11370360.1"
-        assert cache_dir == tmp_path
-        return PMCExtractResult(
-            versioned_pmcid="PMC11370360.1",
-            xml_path=str(tmp_path / "PMC11370360.1" / "PMC11370360.1.xml"),
-            data={
-                "_meta": {"versioned_pmcid": "PMC11370360.1"},
-                "article-info": {"title": "Example title"},
-                "content": {
-                    "sections": [
-                        {
-                            "source_id": "s1",
-                            "section_id": "1",
-                            "paragraphs": [
-                                {"source_id": "p1", "reference_ids": ["R1"]},
-                            ],
-                        },
-                    ],
-                },
-                "references": [],
-                "figures": [],
-                "tables": [],
-                "supporting-info": {"acknowledgements": []},
-            },
-        )
-
-    monkeypatch.setattr("pmc_toolkit.cli.ensure_extracted_article", fake_extract)
-
-    result = runner.invoke(
-        app,
-        [
-            "extract",
-            "content",
-            "PMC11370360.1",
-            "--cache-dir",
-            str(tmp_path),
-        ],
-    )
-
-    assert result.exit_code == 0, result.stdout
-    assert '"content": {' in result.stdout
-    assert '"section_id": "1"' in result.stdout
-    assert '"source_id": "s1"' in result.stdout
-    assert '"source_id": "p1"' in result.stdout
-    assert '"reference_ids": [' in result.stdout
-    assert '"id":' not in result.stdout
-    assert "article-info" not in result.stdout
-
-
-def test_extract_article_info_subcommand_outputs_article_info(monkeypatch) -> None:
-    def fake_extract(requested_pmcid, cache_dir=None):
-        return PMCExtractResult(
-            versioned_pmcid="PMC11370360.1",
-            xml_path="/cache/PMC11370360.1/PMC11370360.1.xml",
-            data={
-                "_meta": {"versioned_pmcid": "PMC11370360.1"},
-                "article-info": {"title": "Example title"},
-                "content": {"sections": [{"section_id": "1", "title": "Introduction"}]},
-                "references": [],
-                "figures": [],
-                "tables": [],
-                "supporting-info": {"acknowledgements": []},
-            },
-        )
-
-    monkeypatch.setattr("pmc_toolkit.cli.ensure_extracted_article", fake_extract)
-
-    result = runner.invoke(app, ["extract", "article-info", "PMC11370360.1"])
-
-    assert result.exit_code == 0, result.stdout
-    assert '"article-info": {' in result.stdout
-    assert '"title": "Example title"' in result.stdout
-    assert '"content": {' not in result.stdout
-
-
 def test_files_subcommand_exits_with_code_1_on_unexpected_error(monkeypatch) -> None:
     def fake_list_files(requested_pmcid: str):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr("pmc_toolkit.cli.list_files", fake_list_files)
+    monkeypatch.setattr("pmc_toolkit.storage_api.list_files", fake_list_files)
 
     result = runner.invoke(app, ["files", "PMC11370360.1"])
 
