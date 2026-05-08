@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pmc-toolkit"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python toolkit and CLI for exploring, downloading, and parsing PMC article data."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -49,7 +49,7 @@ dev = [
 ]
 
 [project.scripts]
-pmc = "pmc_toolkit.cli:main"
+pmc-toolkit = "pmc_toolkit.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pmc_toolkit"]

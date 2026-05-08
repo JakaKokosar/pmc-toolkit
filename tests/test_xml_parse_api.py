@@ -123,5 +123,5 @@ def test_ensure_extracted_article_reads_existing_extracted_cache(tmp_path) -> No
 
 
 def test_ensure_extracted_article_tells_user_to_fetch_first(tmp_path) -> None:
-    with pytest.raises(ValueError, match=r"pmc fetch PMC11370360\.1 --ext xml"):
+    with pytest.raises(ValueError, match=r"pmc-toolkit fetch PMC11370360\.1 --ext xml"):
         ensure_extracted_article("PMC11370360.1", cache_dir=tmp_path)

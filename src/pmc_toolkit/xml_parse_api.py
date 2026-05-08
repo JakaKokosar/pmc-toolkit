@@ -97,7 +97,7 @@ def _ensure_extracted_article_cache(
     if not paths.xml_path.exists():
         raise ValueError(
             "Cached XML not found. Run "
-            f"`pmc fetch {paths.versioned_pmcid} --ext xml"
+            f"`pmc-toolkit fetch {paths.versioned_pmcid} --ext xml"
             f"{' --cache-dir ' + str(paths.cache_root) if cache_dir_was_explicit else ''}` "
             f"first. Expected file: {paths.xml_path}"
         )

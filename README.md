@@ -39,7 +39,7 @@ After code changes, run the checks in [AGENTS.md](AGENTS.md) (typecheck, Ruff, t
 Show the available commands:
 
 ```bash
-uv run pmc --help
+uv run pmc-toolkit --help
 ```
 
 CLI commands print indented JSON to stdout.
@@ -47,19 +47,19 @@ CLI commands print indented JSON to stdout.
 List versions for a PMC article:
 
 ```bash
-uv run pmc versions PMC11370360
+uv run pmc-toolkit versions PMC11370360
 ```
 
 Fetch metadata for the latest available version of a PMCID:
 
 ```bash
-uv run pmc metadata PMC11370360
+uv run pmc-toolkit metadata PMC11370360
 ```
 
 Fetch metadata for a specific version:
 
 ```bash
-uv run pmc metadata PMC11370360.1
+uv run pmc-toolkit metadata PMC11370360.1
 ```
 
 List every object key for an article version (including media and supplements).
@@ -68,7 +68,7 @@ version is known, the cached object-key manifest is reused when present. There
 is no extension filter on this command.
 
 ```bash
-uv run pmc files PMC11370360.1
+uv run pmc-toolkit files PMC11370360.1
 ```
 
 Download files to a local cache. The default root is the **per-OS user cache
@@ -79,27 +79,27 @@ Windows), with files under `<root>/<PMCid.N>/`. Override with `--cache-dir` or
 `PMC_TOOLKIT_CACHE`.
 
 ```bash
-uv run pmc fetch PMC11370360.1
+uv run pmc-toolkit fetch PMC11370360.1
 ```
 
 Download only selected file types, re-downloading even if cached:
 
 ```bash
-uv run pmc fetch PMC11370360.1 --ext xml,pdf,jpg --force
+uv run pmc-toolkit fetch PMC11370360.1 --ext xml,pdf,jpg --force
 ```
 
 The `--ext` option also accepts repeated flags if you prefer the more explicit
 form:
 
 ```bash
-uv run pmc fetch PMC11370360.1 --ext pdf --ext xml --ext jpg --force
+uv run pmc-toolkit fetch PMC11370360.1 --ext pdf --ext xml --ext jpg --force
 ```
 
 Override the cache location via a flag or the `PMC_TOOLKIT_CACHE` env var:
 
 ```bash
-uv run pmc fetch PMC11370360.1 --cache-dir ./data
-PMC_TOOLKIT_CACHE=./data uv run pmc fetch PMC11370360.1
+uv run pmc-toolkit fetch PMC11370360.1 --cache-dir ./data
+PMC_TOOLKIT_CACHE=./data uv run pmc-toolkit fetch PMC11370360.1
 ```
 
 Convert a cached XML file into extracted JSON. Run `fetch --ext xml` first if
@@ -109,14 +109,14 @@ extracted JSON; later conversions for the same article version read that JSON
 cache unless `--force` is passed.
 
 ```bash
-uv run pmc fetch PMC11370360.1 --ext xml
-uv run pmc convert-xml PMC11370360.1
+uv run pmc-toolkit fetch PMC11370360.1 --ext xml
+uv run pmc-toolkit convert-xml PMC11370360.1
 ```
 
 List the extracted JSON top-level keys:
 
 ```bash
-uv run pmc convert-xml --list-keys PMC11370360.1
+uv run pmc-toolkit convert-xml --list-keys PMC11370360.1
 ```
 
 `article_info.publication_date` currently uses the first publication date found
@@ -126,7 +126,7 @@ in the XML. If downstream consumers need to distinguish date types such as
 ## Project Layout
 
 Here **“storage”** means the AWS bucket plus the local cache directory where
-`pmc fetch` writes files—not a database or ORM.
+`pmc-toolkit fetch` writes files—not a database or ORM.
 
 - `src/pmc_toolkit/cli.py` - Typer CLI commands
 - `src/pmc_toolkit/storage_api.py` - import this for programmatic use: list versions, metadata, list all keys, fetch to cache
@@ -144,8 +144,8 @@ Each resolved article version has a directory `<cache_root>/<PMCid.N>/` containi
 
 - **`<PMCid.N>.json`** — cached metadata (from S3 `metadata/<PMCid.N>.json`), written after a successful read.
 - **`.pmc-object-keys.json`** — JSON array of S3 object keys under that article’s prefix, written after `list_objects_v2` (or read on cache hit). If this file is missing or not a list of strings, listing or fetch may refetch from S3 or raise `ValueError` for an invalid manifest.
-- **`.pmc-extracted-article.json`** — full extracted JSON produced from the cached XML by `pmc convert-xml`; reused by later conversions for the same article version.
+- **`.pmc-extracted-article.json`** — full extracted JSON produced from the cached XML by `pmc-toolkit convert-xml`; reused by later conversions for the same article version.
 
-**Cache root selection:** `pmc metadata` and `pmc files` (and the matching `storage_api` functions) always use the default OS user cache from [`platformdirs`](https://github.com/tox-dev/platformdirs). Only `pmc fetch` and `fetch_files(..., cache_dir=...)` accept `--cache-dir` or the `PMC_TOOLKIT_CACHE` environment variable.
+**Cache root selection:** `pmc-toolkit metadata` and `pmc-toolkit files` (and the matching `storage_api` functions) always use the default OS user cache from [`platformdirs`](https://github.com/tox-dev/platformdirs). Only `pmc-toolkit fetch` and `fetch_files(..., cache_dir=...)` accept `--cache-dir` or the `PMC_TOOLKIT_CACHE` environment variable.
 
 **Download paths:** For each S3 key, the toolkit maps `PMCid.N/relative/path` to `<cache_root>/PMCid.N/relative/path`. Keys that do not start with the `PMCid.N/` prefix, use an absolute path segment, or resolve outside that directory (for example `..` path segments) are rejected with `ValueError` so downloads never leave the article folder.

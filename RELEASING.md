@@ -29,7 +29,7 @@ Watch the **Release** workflow in the Actions tab. Approve the `pypi`
 deployment if the environment requires it. Smoke test:
 
 ```sh
-uv run --with "pmc-toolkit==${version}" --no-project -- pmc --help
+uv run --with "pmc-toolkit==${version}" --no-project -- pmc-toolkit --help
 ```
 
 Optionally draft a GitHub Release from the tag for user-facing notes.
