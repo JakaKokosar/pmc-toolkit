@@ -21,14 +21,14 @@ Use this skill to retrieve, download, and parse PMC Open Access article data wit
 3. `metadata <PMCID>` or `metadata <PMCID.N>` returns bibliographic fields, OA flags, and S3 URL fields (`xml_url`, `pdf_url`, and so on). It is **not** the primary command for **resolving which `<PMCID.N>` exists or picking a version**. Details: [references/cli-metadata.md](references/cli-metadata.md).
 4. `files <PMCID.N>` returns the complete S3 object-key inventory for that article version. It is the discovery step for available XML, PDFs, figures, media, and supplements.
 5. `fetch <PMCID.N>` downloads all or filtered S3 objects into the local article cache. Add `--ext` for specific file types, `--cache-dir` for a task-specific cache, and `--force` to refresh cached files.
-6. `convert-xml <PMCID.N>` transforms cached full-text XML into normalized article JSON with top-level keys `article_info`, `content`, `references`, `figures`, `tables`, and `supporting_info`. Use it after XML is present in the selected cache; add `--force` to rebuild the extracted JSON cache. Details: [references/cli-convert-xml.md](references/cli-convert-xml.md).
+6. `parse <PMCID.N>` transforms cached full-text XML into normalized article JSON with top-level keys `article_info`, `content`, `references`, `figures`, `tables`, and `supporting_info`. Use it after XML is present in the selected cache; add `--force` to rebuild the extracted JSON cache. Details: [references/cli-parse.md](references/cli-parse.md).
 
 ## Context-first retrieval
 
 Choose the smallest useful retrieval path for the question:
 
 - Metadata, DOI, license, version, OA status, or file availability: run `versions` if a pinned version matters, then `metadata` or `files`.
-- Abstract title, content sections, funding grants, authors, affiliations, references, figure captions, tables, or supporting statements, use `convert-xml` to get the article JSON:
+- Abstract title, content sections, funding grants, authors, affiliations, references, figure captions, tables, or supporting statements, use `parse` to get the article JSON:
     - Figure questions: inspect `figures[]` from extracted JSON first; fetch only the referenced image extensions when the visual itself is needed.
     - Table questions: inspect `tables[]`; if it is empty, report that no structured XML tables were found rather than falling back to PDF parsing automatically.
     - Supplement, data availability, acknowledgements, competing interests, author contribution, or correspondence questions: inspect `supporting_info`.
@@ -38,13 +38,13 @@ Choose the smallest useful retrieval path for the question:
 
 - [references/cli-versions.md](references/cli-versions.md) — Examples for `versions`, including selecting the latest or a specific `<PMCID.N>`.
 - [references/cli-metadata.md](references/cli-metadata.md) — Examples and field overview for `metadata`.
-- [references/cli-convert-xml.md](references/cli-convert-xml.md) — Examples and field overview for `convert-xml` output.
+- [references/cli-parse.md](references/cli-parse.md) — Examples and field overview for `parse` output.
 
 ## Gotchas
 
 - `versions` rejects versioned IDs; pass only a base PMCID.
-- `metadata`, `files`, `fetch`, and `convert-xml` accept base or versioned IDs. Passing a base ID makes those commands resolve the latest version at run time. Prefer `versions <PMCID>` (then reuse the chosen `<PMCID.N>`) when the work needs an explicit pinned version rather than repeating implicit latest-resolution on each command.
+- `metadata`, `files`, `fetch`, and `parse` accept base or versioned IDs. Passing a base ID makes those commands resolve the latest version at run time. Prefer `versions <PMCID>` (then reuse the chosen `<PMCID.N>`) when the work needs an explicit pinned version rather than repeating implicit latest-resolution on each command.
 - `files` has no extension filter. Use `fetch --ext` for filtered downloads.
-- `convert-xml` needs `<cache>/<PMCID.N>/<PMCID.N>.xml`; run `fetch <PMCID.N> --ext xml` first when the XML is absent.
-- `metadata` and `files` use the default OS user cache. `fetch` and `convert-xml` can use `--cache-dir` or `PMC_TOOLKIT_CACHE`.
-- Cache paths are per article version. Keep the same cache root across `fetch` and `convert-xml`.
+- `parse` needs `<cache>/<PMCID.N>/<PMCID.N>.xml`; run `fetch <PMCID.N> --ext xml` first when the XML is absent.
+- `metadata` and `files` use the default OS user cache. `fetch` and `parse` can use `--cache-dir` or `PMC_TOOLKIT_CACHE`.
+- Cache paths are per article version. Keep the same cache root across `fetch` and `parse`.

@@ -30,4 +30,4 @@ Select an element of `.versions` by index (for example `.versions[0]` for the fi
 
 ## Next steps
 
-After you have `<PMCID.N>`, continue with `metadata`, `files`, `fetch`, and `convert-xml` as described in the main skill.
+After you have `<PMCID.N>`, continue with `metadata`, `files`, `fetch`, and `parse` as described in the main skill.

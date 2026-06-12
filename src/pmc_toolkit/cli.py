@@ -140,8 +140,8 @@ def fetch(
     _emit_json(result.model_dump(mode="json"))
 
 
-@app.command("convert-xml")
-def convert_xml(
+@app.command("parse")
+def parse(
     requested_pmcid: str = typer.Argument(
         ...,
         help="PMC accession ID or version ID, e.g. PMC11370360 or PMC11370360.1",
@@ -160,7 +160,7 @@ def convert_xml(
     ),
 ) -> None:
     """
-    Convert cached PMC full-text XML into cached extracted JSON.
+    Parse cached PMC full-text XML into cached extracted JSON.
     """
 
     def build_result():
