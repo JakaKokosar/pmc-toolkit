@@ -1,0 +1,4 @@
+interface:
+  display_name: "PMC Toolkit"
+  short_description: "Targeted PMC OA paper retrieval"
+  default_prompt: "Use $pmc-toolkit to retrieve only the PMC paper metadata, text sections, figures, tables, or supporting info needed for this question."
