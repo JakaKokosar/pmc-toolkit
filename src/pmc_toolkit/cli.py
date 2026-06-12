@@ -158,22 +158,10 @@ def convert_xml(
         "-f",
         help="Recreate the extracted JSON cache from the cached XML.",
     ),
-    list_keys: bool = typer.Option(
-        False,
-        "--list-keys",
-        help="Print available extracted JSON keys and descriptions, then exit.",
-    ),
 ) -> None:
     """
     Convert cached PMC full-text XML into cached extracted JSON.
     """
-    if list_keys:
-        from pmc_toolkit.xml_parse_utils import EXTRACT_OUTPUT_KEY_DESCRIPTIONS
-
-        typer.echo("Available extracted JSON keys:")
-        for key, description in EXTRACT_OUTPUT_KEY_DESCRIPTIONS.items():
-            typer.echo(f"- {key}: {description}")
-        return
 
     def build_result():
         from pmc_toolkit.xml_parse_api import ensure_extracted_article

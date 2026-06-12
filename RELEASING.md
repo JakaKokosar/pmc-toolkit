@@ -32,6 +32,10 @@ deployment if the environment requires it. Smoke test:
 uv run --with "pmc-toolkit==${version}" --no-project -- pmc-toolkit --help
 ```
 
+From **v0.2.0**, the PyPI wheel exposes only the `pmc-toolkit` console script
+(the previous `pmc` script was removed so the binary matches the distribution
+name).
+
 Optionally draft a GitHub Release from the tag for user-facing notes.
 
 ## Troubleshooting

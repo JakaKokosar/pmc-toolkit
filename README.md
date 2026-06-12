@@ -113,11 +113,6 @@ uv run pmc-toolkit fetch PMC11370360.1 --ext xml
 uv run pmc-toolkit convert-xml PMC11370360.1
 ```
 
-List the extracted JSON top-level keys:
-
-```bash
-uv run pmc-toolkit convert-xml --list-keys PMC11370360.1
-```
 
 `article_info.publication_date` currently uses the first publication date found
 in the XML. If downstream consumers need to distinguish date types such as
