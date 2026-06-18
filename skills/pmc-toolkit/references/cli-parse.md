@@ -60,14 +60,6 @@ The `section_id` values are XML source IDs (`S1`, `S2`, …) — use them with `
 
 `scripts/query-id.jq` returns the first object whose `source_id` matches. After the content outline, pass a chosen ID:
 
-| Prefix | Meaning | Example |
-| --- | --- | --- |
-| `S*` | Section | `S3` |
-| `P*` | Paragraph | `P9` |
-| `F*` | Figure | `F1` |
-| `R*` | Reference | `R1` |
-| `T*` | Table | `T1` |
-
 **Section** — paragraph text and xref links for that section:
 
 ```bash
