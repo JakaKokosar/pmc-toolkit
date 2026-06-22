@@ -73,7 +73,7 @@ def test_ensure_extracted_article_reads_xml_and_writes_extracted_cache(
 
     assert result.versioned_pmcid == "PMC11370360.1"
     assert result.xml_path == str(article_dir / "PMC11370360.1.xml")
-    assert result.data["_meta"]["versioned_pmcid"] == "PMC11370360.1"
+    assert "_meta" not in result.data
     assert result.data["article_info"]["journal"]["name"] == "bioRxiv"
     assert result.data["article_info"]["journal"]["issn"] == "2692-8205"
     assert result.data["article_info"]["article_ids"] == {

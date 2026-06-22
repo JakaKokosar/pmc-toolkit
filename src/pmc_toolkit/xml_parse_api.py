@@ -105,11 +105,7 @@ def _ensure_extracted_article_cache(
     from pmc_toolkit.xml_parse_utils import extract_article_data, load_xml
 
     root = load_xml(paths.xml_path)
-    parsed = _group_extracted_article(
-        extract_article_data(root),
-        versioned_pmcid=paths.versioned_pmcid,
-        xml_path=paths.xml_path,
-    )
+    parsed = _group_extracted_article(extract_article_data(root))
     storage_cache.write_cached_extracted_article(
         paths.cache_root,
         paths.versioned_pmcid,
@@ -120,15 +116,8 @@ def _ensure_extracted_article_cache(
 
 def _group_extracted_article(
     raw_data: dict[str, Any],
-    *,
-    versioned_pmcid: str,
-    xml_path: Path,
 ) -> dict[str, Any]:
     return {
-        "_meta": {
-            "versioned_pmcid": versioned_pmcid,
-            "xml_path": str(xml_path),
-        },
         "article_info": _article_info(raw_data),
         "content": raw_data["content"],
         "references": raw_data["references"],

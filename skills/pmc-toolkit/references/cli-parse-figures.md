@@ -1,3 +1,0 @@
-# parse: figures (`F*`)
-
-TODO

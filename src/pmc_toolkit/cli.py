@@ -71,6 +71,44 @@ def metadata(
     _emit_json(result.model_dump(mode="json"))
 
 
+@app.command("idconv")
+def idconv(
+    identifiers: list[str] = typer.Argument(
+        ...,
+        help=(
+            "PMID, DOI, PMCID, or MID values to convert to PMC identifiers. "
+            "Comma-separated values are accepted."
+        ),
+    ),
+    idtype: str | None = typer.Option(
+        None,
+        "--idtype",
+        help="Optional input identifier type: pmid, doi, pmcid, or mid.",
+    ),
+    email: str | None = typer.Option(
+        None,
+        "--email",
+        envvar="NCBI_EMAIL",
+        help="Optional contact email sent to the NCBI ID Converter API.",
+    ),
+) -> None:
+    """
+    Convert PMID/DOI identifiers to PMC identifiers when available in PMC.
+    """
+
+    def build_result():
+        from pmc_toolkit.idconv_api import convert_to_pmcids
+
+        return convert_to_pmcids(
+            identifiers,
+            idtype=idtype,
+            email=email,
+        )
+
+    result = _run_command(build_result)
+    _emit_json(result["records"])
+
+
 @app.command("files")
 def files(
     requested_pmcid: str = typer.Argument(

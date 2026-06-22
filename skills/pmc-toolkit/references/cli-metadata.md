@@ -1,8 +1,6 @@
 # CLI: `metadata`
 
-Use `metadata <PMCID>` or `metadata <PMCID.N>` to fetch bibliographic fields, Open Access flags, and S3 URL fields (for example `xml_url`, `pdf_url`, `media_urls`, `text_url`), plus `pmid` and `doi`.
-
-**Version resolution:** When the task is to discover which `<PMCID.N>` exist or to **choose** a versioned PMCID, use `versions` first (examples and jq patterns live in `references/cli-versions.md`, linked from the main SKILL), not `metadata`. `metadata` does include a `version` number and versioned URLs for the resolved record, but it is not the right command for enumerating or picking versions.
+Use `metadata <PMCID.N>` to fetch bibliographic fields, Open Access flags, and S3 URL fields (for example `xml_url`, `pdf_url`, `media_urls`, `text_url`), plus `pmid` and `doi`.
 
 Example:
 ```bash

@@ -1,4 +1,4 @@
 interface:
   display_name: "PMC Toolkit"
-  short_description: "Targeted PMC OA paper retrieval"
-  default_prompt: "Use $pmc-toolkit to retrieve only the PMC paper metadata, text sections, figures, tables, or supporting info needed for this question."
+  short_description: "PMC OA evidence extraction"
+  default_prompt: "Use $pmc-toolkit to retrieve PMC paper metadata, files, parsed evidence, authors, figures, tables, or report-ready findings for this PMCID. Convert PMID/DOI to PMCID only when needed to continue PMC full-text work."

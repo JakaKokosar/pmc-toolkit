@@ -10,6 +10,7 @@ The project currently supports:
 - listing available versions for a PMCID
 - validating PMC identifiers before making requests
 - retrieving metadata for a PMC identifier, defaulting to the latest version for a base PMCID
+- converting PMID, DOI, PMCID, or MID values to PMC identifiers when PMC has a matching record
 - listing every object for a resolved article version, using the local cache when available
 - downloading files for an article version into a local cache (optional `--ext`
   filters apply only to `fetch`, not to `files`; `--ext` accepts either a
@@ -60,6 +61,13 @@ Fetch metadata for a specific version:
 
 ```bash
 uv run pmc-toolkit metadata PMC11370360.1
+```
+
+Convert a PMID or DOI to a PMCID when PMC has a matching record:
+
+```bash
+uv run pmc-toolkit idconv 23193287
+uv run pmc-toolkit idconv 10.1093/nar/gks1195 --idtype doi
 ```
 
 List every object key for an article version (including media and supplements).
