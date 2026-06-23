@@ -238,13 +238,11 @@ def extract_content(root: Any) -> dict[str, Any]:
     if body is None:
         return {"sections": []}
 
-    paragraphs = []
+    paragraphs = _direct_paragraph_data(body)
     sections = []
     section_index = 0
     for child in body.xpath("./*"):
-        if child.tag == "p":
-            paragraphs.append(_paragraph_data(child))
-        elif child.tag == "sec":
+        if child.tag == "sec":
             section_index += 1
             sections.append(
                 _section_data(
@@ -270,9 +268,7 @@ def extract_acknowledgements(root: Any) -> list[dict[str, Any]]:
                 {
                     "source_id": ack.get("id"),
                     "title": _direct_child_text(ack, "title"),
-                    "paragraphs": [
-                        _paragraph_data(paragraph) for paragraph in ack.xpath("./p")
-                    ],
+                    "paragraphs": _direct_paragraph_data(ack),
                     "sections": [
                         _section_data(section) for section in ack.xpath("./sec")
                     ],
@@ -285,7 +281,7 @@ def extract_acknowledgements(root: Any) -> list[dict[str, Any]]:
 
 def extract_data_availability(root: Any) -> list[dict[str, Any]]:
     sections = []
-    for section in root.xpath(".//back/sec[@sec-type='data-availability']"):
+    for section in root.xpath(".//sec[@sec-type='data-availability']"):
         sections.append(_section_data(section))
     return sections
 
@@ -606,17 +602,14 @@ def _section_data(
     *,
     content_path: tuple[int, ...] | None = None,
 ) -> dict[str, Any]:
-    paragraphs = []
+    paragraphs = _direct_paragraph_data(section)
     sections = []
     if content_path is None:
-        paragraphs = [_paragraph_data(paragraph) for paragraph in section.xpath("./p")]
         sections = [_section_data(child) for child in section.xpath("./sec")]
     else:
         child_section_index = 0
         for child in section.xpath("./*"):
-            if child.tag == "p":
-                paragraphs.append(_paragraph_data(child))
-            elif child.tag == "sec":
+            if child.tag == "sec":
                 child_section_index += 1
                 sections.append(
                     _section_data(
@@ -633,6 +626,18 @@ def _section_data(
         "sections": sections,
     }
     return _compact_dict(data, keep_empty={"paragraphs", "sections"})
+
+
+def _direct_paragraph_data(parent: Any) -> list[dict[str, Any]]:
+    paragraphs = []
+    for child in parent.xpath("./*"):
+        if child.tag == "p":
+            paragraphs.append(_paragraph_data(child))
+        elif child.tag == "list":
+            paragraphs.extend(
+                _paragraph_data(paragraph) for paragraph in child.xpath("./list-item/p")
+            )
+    return paragraphs
 
 
 def _abstract_section_data(section: Any) -> dict[str, Any]:
