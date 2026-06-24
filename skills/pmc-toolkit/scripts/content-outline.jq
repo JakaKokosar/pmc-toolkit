@@ -3,7 +3,8 @@ def drop_empty($o):
 
 def section:
   drop_empty({
-    section_id: .source_id,
+    source_id: .source_id,
+    section_id: .section_id,
     title: .title,
     sections: [.sections[]? | section]
   });

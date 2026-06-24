@@ -1,13 +1,13 @@
 # CLI: `files` And `fetch`
 
-Use `files <PMCID.N>` to list every S3 object key under the article version prefix. Use `fetch <PMCID.N>` to download all or selected object extensions into the local cache.
+Use `files <PMCID>` to list every S3 object key under the resolved article version prefix. Use `fetch <PMCID>` to download all or selected object extensions into the local cache. The PMCID can be a base ID or a versioned ID.
 
 ## `files`
 
 `files` has no extension filter.
 
 ```bash
-uvx pmc-toolkit files PMCxxxx.N
+uvx pmc-toolkit files PMCxxxx
 ```
 
 Example output:
@@ -31,7 +31,7 @@ Use `fetch` when a file must exist locally for parsing, inspection, or user deli
 
 Example for downloading all files listed in above `files` output:
 ```bash
-uvx pmc-toolkit fetch PMCxxxx.N --ext xml,pdf,jpg
+uvx pmc-toolkit fetch PMCxxxx --ext xml,pdf,jpg
 ```
 
 Example output:
@@ -56,4 +56,4 @@ Use `local_path` if you need access to the downloaded files.
 
 - `metadata` and `files` use the default OS user cache for metadata/manifests.
 - `fetch` and `parse` can use `--cache-dir` or `PMC_TOOLKIT_CACHE`; keep the same cache root across both commands.
-- Cache paths are per article version under `<cache_root>/<PMCID.N>/`.
+- Cache paths are per article version under `<cache_root>/<versioned-PMCID>/`.

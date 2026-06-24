@@ -1,10 +1,10 @@
 # CLI: `metadata`
 
-Use `metadata <PMCID.N>` to fetch bibliographic fields, Open Access flags, and S3 URL fields (for example `xml_url`, `pdf_url`, `media_urls`, `text_url`), plus `pmid` and `doi`.
+Use `metadata <PMCID>` to fetch bibliographic fields, Open Access flags, and S3 URL fields (for example `xml_url`, `pdf_url`, `media_urls`, `text_url`), plus `pmid` and `doi`. The PMCID can be a base ID or a versioned ID.
 
 Example:
 ```bash
-uvx pmc-toolkit metadata PMCxxxx.N
+uvx pmc-toolkit metadata PMCxxxx
 ```
 
 Example output:

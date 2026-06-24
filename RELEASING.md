@@ -11,8 +11,8 @@ no tokens).
 # 1. Make sure main is green and up to date.
 git switch main && git pull
 
-# 2. Bump version (patch | minor | major, or X.Y.Z for an exact version).
-uv version --bump patch
+# 2. Bump version ( major | minor | patch, or X.Y.Z for an exact version).
+uv version --bump "<major | minor | patch>"
 version="$(uv version --short)"
 
 # 3. Commit, push, wait for CI to go green.

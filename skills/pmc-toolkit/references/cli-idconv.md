@@ -22,4 +22,4 @@ Example output shape:
 
 When a record has `status: "error"` or no `pmcid`, stop the PMC full-text workflow for that referenced article and report that no matching PMC record was found. Do not summarize from the title alone.
 
-After a record returns `pmcid`, run `versions <PMCID>` and continue with `metadata`, `fetch`, and `parse`.
+After a record returns `pmcid`, continue directly with `metadata`, `fetch`, and `parse` on that PMCID (it resolves to the latest version automatically). Only run `versions` if the task needs a specific non-latest version.

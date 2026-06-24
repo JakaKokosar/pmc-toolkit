@@ -1,6 +1,6 @@
 # CLI: `versions`
 
-Use `versions <PMCID>` to list every published versioned PMCID string (`PMCxxxx.1`, `PMCxxxx.2`, ...) for a **base** PMCID only. `versions` rejects versioned IDs.
+Use `versions <PMCID>` to list published versioned PMCID strings (`PMCxxxx.1`, `PMCxxxx.2`, ...) for a **base** PMCID only. Use this for version questions, version selection, or reporting the resolved versioned PMCID. For `metadata`, `files`, `fetch`, and `parse`, pass the user's PMCID directly unless a specific non-latest version is required.
 
 ```bash
 uvx pmc-toolkit versions PMCxxxx
@@ -18,9 +18,11 @@ Example output shape:
 }
 ```
 
+`.versions` is an array of strings. The latest versioned PMCID is `.versions[-1]`.
+
 If `.versions` is empty, stop for that PMCID and report that no PMC Open Access version was found. Do not continue to `metadata`, `files`, `fetch`, or `parse` for that PMCID.
 
-## Pick the latest `<PMCID.N>`
+## Pick the latest versioned PMCID
 
 ```bash
 uvx pmc-toolkit versions PMCxxxx | jq -c -r '.versions[-1]'
@@ -32,4 +34,4 @@ Select an element of `.versions` by index (for example `.versions[0]` for the fi
 
 ## Next steps
 
-After you have `<PMCID.N>`, continue with `metadata`, `files`, `fetch`, and `parse` as described in the main skill.
+Use the selected version string only when the task requires a specific version. Otherwise, continue with the user's base PMCID as described in the main skill.
